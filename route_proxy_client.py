@@ -18,7 +18,7 @@ in_method_s = config.sections()
 drives = []
 for in_method in in_method_s:
     for option in config.options(in_method):
-        if in_method == "usb":
+        if in_method == "kbd":
             try:
                 drives.append(evdev.InputDevice(option))
             except Exception as e:
@@ -27,7 +27,7 @@ for in_method in in_method_s:
 print(drives)
 import socket
 
-s = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 address = ("192.168.1.139", 3390)
 
 #select读取

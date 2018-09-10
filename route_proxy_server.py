@@ -30,12 +30,12 @@ class RouteProxyServer(object):
             raise
 
     def is_function_key_value(self, key_value):
-        if key_value == "FCTEST":
+        if key_value == "001-FCTEST":
             return True
         return False
 
     def is_login_key_value(self, key_value):
-        if key_value == "G18206":
+        if key_value == "001-G18206":
             return True
         return False
 
@@ -43,7 +43,7 @@ class RouteProxyServer(object):
         while True:
             readable, writeable, exceptional = select.select([self.server, ], [], [])
             for server in readable:
-                data, addr = server.recvfrom(2048)
+                data, addr = server.recvfrom(512)
 
                 type, source, keycode = struct.unpack("3s100si", data)
                 source_path = source.decode("utf-8").rstrip('\0')
@@ -67,11 +67,14 @@ class RouteProxyServer(object):
                             self.key_recode[source_path] = ""
                             if self.is_login_key_value(key_value.rstrip("\n")):
                                 # 更新或添加登录信息
+                                print("登录")
                                 self.login_recode[source_path] = key_value.rstrip("\n")
                             elif self.is_function_key_value(key_value.rstrip("\n")):
                                 # 设置当前功能
+                                print("设置功能")
                                 self.function_recode[source_path] = key_value.rstrip("\n")
                             else:
+                                print("收到键码")
                                 # 登录信息以及功能信息完备才进行相应的业务处理
                                 login_value = self.login_recode.get(source_path, None)
                                 function_value = self.function_recode.get(source_path, None)
@@ -81,8 +84,8 @@ class RouteProxyServer(object):
                                 elif function_value is None:
                                     msg = "未设置功能"
                                 else:
-                                    msg = login_value + ":" + function_value + ":" + addr[0] + ":"+addr[1] + ":" + \
-                                          source_path + ":" + key_value
+                                    msg = login_value + ":" + function_value + ":" + addr[0] + ":"+str(addr[1]) + ":" + \
+                                          source_path + ":" + str(key_value)
                                 print(msg)
                                 curr_path = util.get_curr_path()
                                 direct = curr_path+"/no_direct.txt"
