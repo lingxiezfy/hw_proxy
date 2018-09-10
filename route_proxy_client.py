@@ -42,7 +42,7 @@ while True:
                     print("code:"+str(result.code))
                     if result.type == evdev.ecodes.EV_KEY and result.value == 0x01:
                         print(str(evdev.ecodes.KEY[result.code])[4:])
-                        packet = struct.pack("3s100si", "usb".encode("utf-8"), dev.path.encode("utf-8"), result.code)
+                        packet = struct.pack("3s100si", "kbd".encode("utf-8"), dev.path.encode("utf-8"), result.code)
                         s.sendto(packet, address)
         except Exception as e:
             print(e.__repr__())
