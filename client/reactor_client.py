@@ -6,32 +6,41 @@
 # @Software: PyCharm
 
 from twisted.protocols.basic import LineReceiver
+from twisted.protocols.basic import NetstringReceiver
 from twisted.internet.protocol import ClientFactory
 
 
-class ProxyProtocol(LineReceiver):
+class ProxyProtocol(NetstringReceiver):
     def connectionMade(self):
-        self.sendLine("I'm connecting!".encode())
+        self.sendString("I'm connecting!".encode())
+        # self.sendLine("I'm connecting!".encode())
 
-    def send_some_thing(self, s):
-        self.sendLine(s.encode())
+    def send_some_thing(self):
+        self.sendLine("I send number!".encode())
 
 
 class HidClientFactory(ClientFactory):
     protocol = ProxyProtocol
-    proto = []
+    proto = None
 
     def buildProtocol(self, addr):
-        p = ClientFactory.buildProtocol(addr)
+        p = ClientFactory.buildProtocol(self, addr)
         self.proto = p
         return p
 
 
+def send_loop(factory):
+    print("send")
+    factory.proto.send_some_thing("I send number!")
 
 
-def main():
+def proxy_main():
     factory = HidClientFactory()
     from twisted.internet import reactor
     reactor.connectTCP('192.168.1.139', 3390, factory)
+    reactor.run()
+    # reactor.callWhenRunning(send_loop, factory)
 
-    factory.proto
+
+if __name__ == "__main__":
+    proxy_main()

@@ -6,21 +6,26 @@
 # @Software: PyCharm
 
 from twisted.protocols.basic import LineReceiver
+from twisted.protocols.basic import NetstringReceiver
 from twisted.internet.protocol import ServerFactory
 
 
 # 代理传输协议，基于LineReceiver
-class ProxyProtocol(LineReceiver):
-    def dataReceived(self, data):
-        self._on_data_received(data)
+class ProxyProtocol(NetstringReceiver):
+    # def dataReceived(self, data):
+    #     self._on_data_received(data)
+
+    def stringReceived(self, string):
+        self._on_data_received()
 
     def _on_data_received(self, data):
+        print(data)
         print(data.decode())
         pass
 
     # 连接丢失时的回调
-    def connectionLost(self):
-        print("连接丢失：%s" % self.transport.getHost())
+    def connectionLost(self, reason):
+        print("连接丢失：%s" % (self.transport.getPeer(),))
         self.transport.loseConnection()
         pass
 
