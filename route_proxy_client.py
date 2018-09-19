@@ -5,32 +5,14 @@
 # @File    : route_proxy_client
 # @Software: PyCharm
 
-import configparser
 import evdev
 import util
-import traceback
-
-#加载桥接端口配置
-config = configparser.ConfigParser(delimiters=("=",))
-config.read(util.get_curr_path()+"/config/route_config.conf")
-in_method_s = config.sections()
-
-#准备读取对象
-drives = []
-for in_method in in_method_s:
-    for option in config.options(in_method):
-        if in_method == "kbd":
-            try:
-                drives.append(evdev.InputDevice(option))
-            except Exception as e:
-                print("接口未使用："+option)
-
-print(drives)
 import socket
+import time
+
 
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 address = ("192.168.1.139", 3390)
-import time
 i = 0
 while True:
     i += 1
@@ -42,13 +24,24 @@ while True:
     time.sleep(10)
 
 
-
 #select读取
 import select
 import struct
 
+#准备读取对象
+drives = []
+kbd_input_list = []
 function_key = {}
 key_recode = {}
+
+# 初始化usb类键盘设备
+usb_temps = util.get_kbd_input_list()
+for u_t in usb_temps:
+    if u_t not in kbd_input_list:
+        print("新加入设备：%s" % u_t)
+        drives.append(evdev.InputDevice(util.get_kbd_input_dir()+""+u_t))
+        kbd_input_list.append(u_t)
+print(drives)
 while True:
 
     d, w, x = select.select(drives, [], [])
@@ -69,11 +62,11 @@ while True:
                             function_key[dev.path] = True
                         elif result.code == 28:
                             key_str = key_recode[dev.path]
-                            key_str += "\r\n"
-                            packet = struct.pack("3s100si", "kbd".encode("utf-8"), dev.path.encode("utf-8"),
-                                                 result.code)
-                            s.sendall(packet)
-                            s.send(key_str.encode())
+                            packet = struct.pack("3s60s20s", "kbd".encode("utf-8"),
+                                                 dev.path[19:].encode("utf-8"),
+                                                 key_str.encode("utf-8"))
+                            packet += "\r\n".encode("utf-8")
+                            s.send(packet)
                             # 置空键值缓存
                             key_recode[dev.path] = ""
                         else:
@@ -82,9 +75,23 @@ while True:
                             # 重置功能键
                             if function_key[dev.path]:
                                 function_key[dev.path] = False
-
-        except Exception as e:
-            print(traceback.print_exc())
-            print(e.__repr__())
+        except OSError as ose:
+            print(ose.__repr__())
             drives.remove(dev)
-            print("接口已拔出"+dev.path)
+            # dev.path[len(util.get_kbd_input_dir()):]
+            kbd_input_list.remove(dev.path[19:])
+            util.remove_file(dev.path)
+            print("接口已拔出: " + dev.path)
+        except Exception as e:
+            print(e.__repr__())
+            print("发生错误")
+
+    # 检测新加入的usb类键盘设备
+    usb_temps = util.get_kbd_input_list()
+    for u_t in usb_temps:
+        if u_t not in kbd_input_list:
+            print("新加入设备：%s" % u_t)
+            drives.append(evdev.InputDevice(util.get_kbd_input_dir()+""+u_t))
+            print(drives)
+            kbd_input_list.append(u_t)
+

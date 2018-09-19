@@ -7,19 +7,28 @@
 
 import os
 
-usb_input_path = "/dev/input/by-path/"
+kbd_input_path = "/dev/input/by-path/"
 
 
 def get_curr_path():
     return os.path.split(os.path.realpath(__file__))[0]
 
 
-def get_usb_input_dir():
-    return usb_input_path
+def get_kbd_input_dir():
+    return kbd_input_path
 
 
-def get_usb_input_list():
-    return os.listdir(usb_input_path)
+def remove_file(path):
+    try:
+        os.remove(path)
+    except Exception as e:
+        pass
+
+def get_kbd_input_list():
+    try:
+        return os.listdir(kbd_input_path)
+    except FileNotFoundError:
+        return []
 
 
 def _make_file_path(path, filename):
