@@ -38,12 +38,12 @@ class RouteProxyServer(object):
         self.inputs.append(self.server)
 
     def is_function_key_value(self, key_value):
-        if key_value == "001-FCTEST":
+        if key_value == "FCTEST":
             return True
         return False
 
     def is_login_key_value(self, key_value):
-        if key_value == "001-G18206":
+        if key_value == "G18206":
             return True
         return False
 

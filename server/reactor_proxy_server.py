@@ -6,17 +6,16 @@
 # @Software: PyCharm
 
 from twisted.protocols.basic import LineReceiver
-from twisted.protocols.basic import NetstringReceiver
 from twisted.internet.protocol import ServerFactory
 
 
 # 代理传输协议，基于LineReceiver
-class ProxyProtocol(NetstringReceiver):
-    # def dataReceived(self, data):
-    #     self._on_data_received(data)
+class ProxyProtocol(LineReceiver):
+    def connectionMade(self):
+        print("客户端连接：%s" % (self.transport.getPeer(),))
 
-    def stringReceived(self, string):
-        self._on_data_received()
+    def dataReceived(self, data):
+        self._on_data_received(data)
 
     def _on_data_received(self, data):
         print(data)
