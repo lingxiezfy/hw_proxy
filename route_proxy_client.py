@@ -62,6 +62,7 @@ while True:
                             function_key[dev.path] = True
                         elif result.code == 28:
                             key_str = key_recode[dev.path]
+                            # 向代理服务发送数据包
                             packet = struct.pack("3s60s20s", "kbd".encode("utf-8"),
                                                  dev.path[19:].encode("utf-8"),
                                                  key_str.encode("utf-8"))
@@ -77,6 +78,8 @@ while True:
                                 function_key[dev.path] = False
         except OSError as ose:
             print(ose.__repr__())
+            del function_key[dev.path]
+            del key_recode[dev.path]
             drives.remove(dev)
             # dev.path[len(util.get_kbd_input_dir()):]
             kbd_input_list.remove(dev.path[19:])

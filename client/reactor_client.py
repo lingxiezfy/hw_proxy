@@ -8,8 +8,6 @@
 from twisted.protocols.basic import LineReceiver
 from twisted.internet.protocol import ClientFactory
 
-import evdev
-
 class ProxyProtocol(LineReceiver):
     def connectionMade(self):
         self.sendLine("I'm connecting!".encode())

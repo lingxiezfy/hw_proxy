@@ -14,8 +14,8 @@ class ProxyProtocol(LineReceiver):
     def connectionMade(self):
         print("客户端连接：%s" % (self.transport.getPeer(),))
 
-    def dataReceived(self, data):
-        self._on_data_received(data)
+    def lineReceived(self, line):
+        self._on_data_received(line)
 
     def _on_data_received(self, data):
         print(data)
@@ -39,7 +39,7 @@ def main():
 
     factory = ProxyServerFactory()
     from twisted.internet import reactor
-    port = reactor.listenTCP(3390, factory, interface='192.168.1.139')
+    port = reactor.listenTCP(3390, factory)
     print('Serving transforms on %s.' % (port.getHost(),))
     reactor.run()
 
