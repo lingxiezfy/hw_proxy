@@ -6,7 +6,8 @@
 # @Software: PyCharm
 
 from twisted.protocols.basic import LineReceiver
-from twisted.internet import defer,main
+from twisted.internet import defer, main
+from twisted.python.failure import Failure
 from twisted.internet.protocol import ServerFactory, ReconnectingClientFactory
 from twisted.internet import reactor
 
@@ -19,9 +20,8 @@ class ProxyProtocol(LineReceiver):
         self._on_data_received(line)
 
     def _on_data_received(self, data):
-        print(data)
         print(data.decode())
-        pass
+        self.factory.data_receive(data.decode())
 
     # 连接丢失时的回调
     def connectionLost(self, reason):
@@ -44,6 +44,10 @@ class ProxyServerFactory(ServerFactory):
     def startFactory(self):
         result_factory = ResultClientFactory(self.deferred)
         reactor.connectTCP("127.0.0.1", 6690, result_factory)
+
+    def data_receive(self, data):
+        self.send_result(data)
+
 
     def _init_set_deferred(self):
         d = defer.Deferred()
@@ -71,7 +75,10 @@ class ProxyServerFactory(ServerFactory):
         self.result_protocol = None
 
     def send_result(self, result):
-        reactor.callLater(0.1, self.result_protocol.send_result, result)
+        if self.result_protocol is None:
+            print("Result server have not connect")
+        else:
+            reactor.callLater(0.01, self.result_protocol.send_result, result)
 
 
 # 与ResultWebSocketServer通信Protocol
@@ -81,13 +88,14 @@ class ResultClientProtocol(LineReceiver):
         self.deferred = deferred
 
     def connectionMade(self):
+        # self.deferred.errback(Failure(Exception("Test errback")))
         self.deferred.callback(self)
         print("Connected to Result Server and callback to set protocol")
 
     def send_result(self, result):
-        print("send %s" % self.deferred)
+        # print("send %s" % self.deferred)
         self.sendLine(result.encode())
-        self.connectionLost()
+        # self.connectionLost()
 
     def connectionLost(self, reason=main.CONNECTION_LOST):
         self.transport.loseConnection()
@@ -108,12 +116,12 @@ class ResultClientFactory(ReconnectingClientFactory):
         return self.p
 
     def clientConnectionFailed(self, connector, reason):
-        print("Connect to result server failure")
+        print("Connect to result server failure, waiting for reconnect...")
         ReconnectingClientFactory.clientConnectionFailed(self, connector, reason)
 
     def clientConnectionLost(self, connector, unused_reason):
         ReconnectingClientFactory.clientConnectionLost(self, connector, unused_reason)
-        print("Lost Connection from result server")
+        print("Lost Connection from result server, waiting for reconnect...")
         self.deferred[1].errback(unused_reason)
 
 
