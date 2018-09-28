@@ -11,16 +11,8 @@ from twisted.protocols.basic import LineReceiver
 from twisted.internet import main, error, defer
 from twisted.python import failure
 from twisted.internet import reactor, endpoints
-import hashlib
-import base64
-import struct
-from twisted.web.http import HTTPFactory, HTTPChannel, _GenericHTTPChannelProtocol
 
-from web_socket import WebSocketProtocol
-
-class ResultServerFactory(HTTPFactory):
-    # protocol = _genericHttpChannelProtocol
-    protocol = WebSocketProtocol
+from web_socket import WebSocketFactory
 
 
 class ResultProtocol(LineReceiver):
@@ -42,7 +34,7 @@ class ResultFactory(ServerFactory):
 
     def startFactory(self):
         print("open webSocket at port 6677")
-        factory = ResultServerFactory()
+        factory = WebSocketFactory()
         endpoints.serverFromString(reactor, "tcp:6677").listen(factory)
 
     def data_receive(self, data):
