@@ -18,8 +18,8 @@ from twisted.web.http import HTTPFactory, HTTPChannel, _GenericHTTPChannelProtoc
 
 from web_socket import WebSocketProtocol
 
+
 class ResultServerFactory(HTTPFactory):
-    # protocol = _genericHttpChannelProtocol
     protocol = WebSocketProtocol
 
 
