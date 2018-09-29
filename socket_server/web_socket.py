@@ -21,10 +21,8 @@ class WebSocketProtocol(protocol.Protocol):
     handshake_header = {}
     wsf = None
 
-    def __init__(self, success_deferred, lost_deferred):
+    def __init__(self):
         self.wsf = WebSocketFramer()
-        self.success_deferred = success_deferred
-        self.lost_deferred = lost_deferred
 
     def connectionMade(self):
         print('WebSocket connect: %s.' % (self.getPeer(),))
@@ -41,7 +39,7 @@ class WebSocketProtocol(protocol.Protocol):
                     # do some thing
                     self._pull_data(result)
                     # hear do echo also
-                    self.sendFramer(self.wsf.pack_framer(result))
+                    self.sendFramer(result)
         else:
             self._handshake(data)
 
@@ -49,13 +47,15 @@ class WebSocketProtocol(protocol.Protocol):
         print("close WebSocket : %s." % (self.getPeer(),))
         self.is_handshake = False
         self.handshake_header = {}
-        self.lost_deferred.callback(self)
+        self.factory.lost_webSocket(self, reason)
 
     def _pull_data(self, data):
         self.factory.data_receive(self, data)
 
-    # framer must be encode
-    def sendFramer(self, framer):
+    # data is str
+    def sendFramer(self, data):
+        print("will be framer %s " % data)
+        framer = self.wsf.pack_framer(data)
         self.write(framer)
 
     def write(self, data):
@@ -90,8 +90,8 @@ class WebSocketProtocol(protocol.Protocol):
                            b"Connection: Upgrade\r\nSec-WebSocket-Accept: %s\r\n\r\n"
                            % self._generate_token(self.handshake_header[b'Sec-WebSocket-Key']))
                 self.is_handshake = True
-                self.success_deferred.callback(self)
                 print("handshake with WebSocket: %s." % (self.getPeer(),))
+                self.factory.success_connect_webSocket(self)
             else:
                 self.connectionLost(failure.Failure(error.VerifyError))
         else:
@@ -177,25 +177,37 @@ class WebSocketFramer(object):
 class WebSocketFactory(protocol.ServerFactory):
     protocol = WebSocketProtocol
     clients = []
+
+    def __init__(self, deferreds):
+        self.deferreds = deferreds
+
     def buildProtocol(self, addr):
-        print(addr)
-        success_deferred = defer.Deferred()
-        success_deferred.addBoth(self.success_connect_webSocket)
-        lost_deferred = defer.Deferred()
-        lost_deferred.addBoth(self.lost_webSocket)
-        p = self.protocol(success_deferred, lost_deferred)
+        p = self.protocol()
         p.factory = self
         return p
 
     def data_receive(self, client, data):
-        print("pull factory %s : %s" % (client, data))
+        result = (client, data)
+        self.deferreds[0].callback(result)
+        pass
 
     def success_connect_webSocket(self, client):
         self.clients.append(client)
         print("callback: %d " % len(self.clients))
 
-    def lost_webSocket(self, client):
+    def lost_webSocket(self, client, reason):
         if client in self.clients:
             self.clients.remove(client)
         print("errback: %d " % len(self.clients))
+
+    def boadcast(self, data):
+        print("boadcast: %s " % data)
+        for client in self.clients:
+            self.send_to(client, data)
+
+    def send_to(self, client, data):
+        print("send to %s Later: %s " % (client, data))
+        from twisted.internet import reactor
+        reactor.callLater(0.01, client.sendFramer, data)
+
 
