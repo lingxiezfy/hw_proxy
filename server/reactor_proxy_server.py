@@ -30,7 +30,7 @@ class ProxyProtocol(LineReceiver):
         pass
 
 
-# 代理服务工厂，管理客户端连接
+# 代理服务工厂，管理客户端连接 与 结果反馈
 class ProxyServerFactory(ServerFactory):
     # 注册一个传输协议
     protocol = ProxyProtocol
@@ -38,7 +38,7 @@ class ProxyServerFactory(ServerFactory):
     deferred = []
 
     def __init__(self):
-        self.deferred = [self._init_set_deferred(), self._init_lost_deferred()]
+        self.deferred = [self._init_set_deferred(), self._init_lost_deferred(), self._init_result_info_deferred()]
         print("create %s" % self.deferred)
 
     def startFactory(self):
@@ -48,6 +48,10 @@ class ProxyServerFactory(ServerFactory):
     def data_receive(self, data):
         self.send_result(data)
 
+    def on_result_info_receive(self, data):
+        self.deferred[2] = self._init_result_info_deferred()
+        print(data)
+        pass
 
     def _init_set_deferred(self):
         d = defer.Deferred()
@@ -59,11 +63,16 @@ class ProxyServerFactory(ServerFactory):
         d.addBoth(self.on_result_protocol_lost)
         return d
 
+    def _init_result_info_deferred(self):
+        d = defer.Deferred()
+        d.addBoth(self.on_result_info_receive)
+        return d
+
     def set_result_protocol(self, p):
         self.deferred[0] = self._init_set_deferred()
         self.result_protocol = p
         print("Set result protocol Success：%s" % self.result_protocol)
-        self.send_result("test")
+        self.send_result("ws&127.0.0.1;mate_panel_1&echo")
 
     def set_result_failed(self, err):
         self.deferred[0] = self._init_set_deferred()
@@ -81,27 +90,23 @@ class ProxyServerFactory(ServerFactory):
             reactor.callLater(0.01, self.result_protocol.send_result, result)
 
 
-# 与ResultWebSocketServer通信Protocol
+# 与ResultServer通信Protocol
 class ResultClientProtocol(LineReceiver):
 
-    def __init__(self, deferred):
-        self.deferred = deferred
-
     def connectionMade(self):
-        # self.deferred.errback(Failure(Exception("Test errback")))
-        self.deferred.callback(self)
-        print("Connected to Result Server and callback to set protocol")
+        self.factory.connect_success(self)
+
+    def lineReceived(self, line):
+        self.factory.data_receive(line)
 
     def send_result(self, result):
-        # print("send %s" % self.deferred)
         self.sendLine(result.encode())
-        # self.connectionLost()
 
     def connectionLost(self, reason=main.CONNECTION_LOST):
         self.transport.loseConnection()
 
 
-# 与ResultWebSocketServer通信Factory
+# 与ResultServer通信Factory
 class ResultClientFactory(ReconnectingClientFactory):
     p = None
 
@@ -109,11 +114,18 @@ class ResultClientFactory(ReconnectingClientFactory):
         self.deferred = deferred
 
     def buildProtocol(self, addr):
-        self.p = ResultClientProtocol(self.deferred[0])
+        self.p = ResultClientProtocol()
         self.p.factory = self
         self.resetDelay()
         print("Making result protocol ...")
         return self.p
+
+    def data_receive(self, data):
+        self.deferred[2].callback(data)
+
+    def connect_success(self, p):
+        self.deferred[0].callback(p)
+        print("Connected to Result Server and callback to set protocol")
 
     def clientConnectionFailed(self, connector, reason):
         print("Connect to result server failure, waiting for reconnect...")
