@@ -25,26 +25,27 @@ class WebSocketProtocol(protocol.Protocol):
         self.wsf = WebSocketFramer()
 
     def connectionMade(self):
-        print('WebSocket connect: %s.' % (self.getPeer(),))
+        pass
+        # print('WebSocket connect: %s.' % (self.getPeer(),))
 
     def dataReceived(self, data):
         if self.is_handshake:
             result = self.wsf.unpack_framer(data)
             if result:
                 if result == 8:
-                    print("do Closing: %s." % (self.getPeer(),))
+                    # print("do Closing: %s." % (self.getPeer(),))
                     self.loseConnection()
                 else:
-                    print("received from %s : %s." % (self.getPeer(), result))
+                    # print("received from %s : %s." % (self.getPeer(), result))
                     # do some thing
                     self._pull_data(result)
                     # hear do echo also
-                    self.sendFramer(result)
+                    # self.sendFramer(result)
         else:
             self._handshake(data)
 
     def connectionLost(self, reason=None):
-        print("close WebSocket : %s." % (self.getPeer(),))
+        # print("close WebSocket : %s." % (self.getPeer(),))
         self.is_handshake = False
         self.handshake_header = {}
         self.factory.lost_webSocket(self, reason)
@@ -54,7 +55,7 @@ class WebSocketProtocol(protocol.Protocol):
 
     # data is str
     def sendFramer(self, data):
-        print("will be framer %s " % data)
+        # print("will be framer %s " % data)
         framer = self.wsf.pack_framer(data)
         self.write(framer)
 
@@ -90,7 +91,7 @@ class WebSocketProtocol(protocol.Protocol):
                            b"Connection: Upgrade\r\nSec-WebSocket-Accept: %s\r\n\r\n"
                            % self._generate_token(self.handshake_header[b'Sec-WebSocket-Key']))
                 self.is_handshake = True
-                print("handshake with WebSocket: %s." % (self.getPeer(),))
+                # print("handshake with WebSocket: %s." % (self.getPeer(),))
                 self.factory.success_connect_webSocket(self)
             else:
                 self.connectionLost(failure.Failure(error.VerifyError))
@@ -108,7 +109,7 @@ class WebSocketFramer(object):
 
     def unpack_framer(self, framer):
         if len(framer) == 0:
-            print("null framer")
+            # print("null framer")
             return b""
         # print("unpack: %s " % self.framer)
         self.FIN = int(framer[0] >> 7)
@@ -154,7 +155,7 @@ class WebSocketFramer(object):
             print("to close the webSocket")
             return 8
         else:
-            print("data error")
+            # print("data error")
             return None
 
     # no-mask
@@ -176,37 +177,57 @@ class WebSocketFramer(object):
 
 class WebSocketFactory(protocol.ServerFactory):
     protocol = WebSocketProtocol
-    clients = []
+    clients = {}
+    every_client_limit = 4
 
-    def __init__(self, deferreds):
+    def __init__(self, deferreds, every_client_limit):
         self.deferreds = deferreds
+        self.every_client_limit = every_client_limit
 
     def buildProtocol(self, addr):
-        p = self.protocol()
-        p.factory = self
-        return p
+        if len(self.clients.get(addr.host, [])) < 4:
+            p = self.protocol()
+            p.factory = self
+            return p
+        else:
+            return None
 
     def data_receive(self, client, data):
-        result = (client, data)
+        result = (client, data, "ws")
         self.deferreds[0].callback(result)
         pass
 
     def success_connect_webSocket(self, client):
-        self.clients.append(client)
-        print("callback: %d " % len(self.clients))
+        if client.getPeer().host not in self.clients:
+            self.clients[client.getPeer().host] = []
+        self.clients[client.getPeer().host].append(client)
+        client_info = (client, "ws")
+        self.deferreds[1].callback(client_info)
+        # print(self.clients)
+        # print("callback: %d " % len(self.clients))
 
     def lost_webSocket(self, client, reason):
-        if client in self.clients:
-            self.clients.remove(client)
-        print("errback: %d " % len(self.clients))
+        if client.getPeer().host in self.clients:
+            client_info = (client, "ws")
+            self.deferreds[2].callback(client_info)
+            self.clients[client.getPeer().host].remove(client)
+            del client
+            # print("errback: %d " % len(self.clients))
 
     def boadcast(self, data):
-        print("boadcast: %s " % data)
-        for client in self.clients:
+        # print("boadcast: %s " % data)
+        for client_item in self.clients.items():
+            print(client_item)
+            for client in client_item[1]:
+                self.send_to(client, data)
+
+    def boadcast_local(self, clients, data):
+        # print("boadcast_local: %s " % data)
+        for client in clients:
             self.send_to(client, data)
 
     def send_to(self, client, data):
-        print("send to %s Later: %s " % (client, data))
+        # print("send to %s Later: %s " % (client, data))
         from twisted.internet import reactor
         reactor.callLater(0.01, client.sendFramer, data)
 
