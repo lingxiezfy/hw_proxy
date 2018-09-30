@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+    <title>状态扫描</title>
+    <link rel="icon" href="../icon/statusscan.ico">
+
+    <link rel="stylesheet" href="../css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/statusscan.css">
+</head>
+<body>
+<nav class="navbar navbar-inverse navbar-fixed-top">
+    <div class="container-fluid">
+        <div class="navbar-header">
+            <span class="navbar-brand" id="header_title">状态扫描工具</span>
+        </div>
+        <div id="navbar" class="navbar-collapse collapse">
+            <ul class="nav navbar-nav navbar-right">
+                <li><a href="../" onclick="return window.confirm('确认返回？')">返回主页</a></li>
+                <li><a id="screen_btn" href="#" onclick="fullScreen()">全屏显示</a></li>
+                <!--
+                <li><a href="#" onclick="add_window()">添加窗口(当前4)/(最多4)</a></li>
+                -->
+            </ul>
+        </div>
+    </div>
+</nav>
+<div class="height_container">
+<div class="height_nav"></div>
+<div class="container-fluid height_content">
+    <div class="row">
+            <div class="col-md-6">
+                <div id="mate_panel_1" class="panel panel-primary">
+                    <div class="panel-heading">
+                        <div>
+                            <h3 class="panel-title">
+                                姓名(工号)-完成数量: - 状态【 】
+                                <button class="btn btn-success btn-xs rc_btn" onclick="reConnect('mate_panel_1')">重新连接</button>
+                            </h3>
+
+                        </div>
+                    </div>
+                    <div class="panel-body mate_win_body body_overflow">
+
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div id="mate_panel_2" class="panel panel-primary">
+                    <div class="panel-heading">
+                        <h3 class="panel-title">
+                            姓名(工号)-完成数量: - 状态【 】
+                            <button class="btn btn-success btn-xs rc_btn" onclick="reConnect('mate_panel_2')">重新连接</button>
+                        </h3>
+                    </div>
+                    <div class="panel-body mate_win_body">
+                    </div>
+                </div>
+            </div>
+    </div>
+    <div class="row">
+            <div class="col-md-6">
+                <div id="mate_panel_3" class="panel panel-primary">
+                    <div class="panel-heading">
+                        <h3 class="panel-title">
+                            姓名(工号)-完成数量: - 状态【 】
+                            <button class="btn btn-success btn-xs rc_btn" onclick="reConnect('mate_panel_3')">重新连接</button>
+                        </h3>
+                    </div>
+                    <div class="panel-body mate_win_body">
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div id="mate_panel_4" class="panel panel-primary">
+                    <div class="panel-heading">
+                        <h3 class="panel-title">
+                            姓名(工号)-完成数量: - 状态【 】
+                            <button class="btn btn-success btn-xs rc_btn" onclick="reConnect('mate_panel_4')">重新连接</button>
+                        </h3>
+                    </div>
+                    <div class="panel-body mate_win_body">
+                    </div>
+                </div>
+            </div>
+    </div>
+
+</div>
+</div>
+<script src="../js/jquery-3.3.1.min.js"></script>
+<script src="../js/bootstrap.min.js"></script>
+<script src="js/statusscan.js"></script>
+<script>
+    var host = "localhost";
+    var port = "6677";
+    var msg_max_count = 40;
+    /*
+    function connect(msg_id) {
+        var ws = new WebSocket("ws://localhost:6677");
+        try {
+            ws.onopen = function (msg) {
+                $('#' + msg_id + '').append("<div>连接成功</div>");
+            };
+            ws.onmessage = function (msg) {
+                $('#' + msg_id + '').append("<div>" + msg.data + "</div>");
+            }
+
+        } catch (e) {
+            console.log(e)
+        }
+    }
+    connect("no_mate_body_id");
+    */
+    function somebodyPanel(panel_id) {
+        var oPanel = new Object();
+        oPanel.panel_id = panel_id;
+        oPanel.ws = new WebSocket("ws://" + host + ":" + port + "");
+        oPanel.ws.onopen = function (msg) {
+            oPanel.ws.send("" + panel_id + "");
+            add_msg(oPanel.panel_id,"连接成功");
+            $('#' + oPanel.panel_id + '').removeClass("panel-danger");
+            $('#' + oPanel.panel_id + '').addClass("panel-primary");
+            $('#' + oPanel.panel_id + ' .rc_btn').attr("disabled","disabled");
+        };
+        oPanel.ws.onmessage = function (msg) {
+            add_msg(oPanel.panel_id,msg.data)
+        };
+        /*
+        oPanel.ws.onerror = function (msg){
+            console.log("ss");
+            console.log(WebSocket.CLOSED +":"+WebSocket.CLOSING+":"+WebSocket.CONNECTING+":"+WebSocket.OPEN)
+            console.log(oPanel.ws.readyState);
+            add_msg(oPanel.panel_id,"连接失败");
+            $('#' + oPanel.panel_id + '').removeClass("panel-primary");
+            $('#' + oPanel.panel_id + '').addClass("panel-danger");
+        };
+        */
+        oPanel.ws.onclose = function (msg) {
+            add_msg(oPanel.panel_id,"连接丢失");
+            $('#' + oPanel.panel_id + '').removeClass("panel-primary");
+            $('#' + oPanel.panel_id + '').addClass("panel-danger");
+            $('#' + oPanel.panel_id + ' .rc_btn').removeAttr("disabled");
+        };
+        return oPanel;
+    }
+    panel1 = somebodyPanel("mate_panel_1");
+    panel2 = somebodyPanel("mate_panel_2");
+    panel3 = somebodyPanel("mate_panel_3");
+    panel4 = somebodyPanel("mate_panel_4");
+
+    function add_msg(panel_id,msg) {
+        var panel_length = $('#' + panel_id + ' .panel-body').children("div").length;
+        if (panel_length >= msg_max_count){
+            $('#' + panel_id + ' .panel-body').children("div")[panel_length -1].remove()
+        }
+        $('#' + panel_id + ' .panel-body').prepend("<div>"+panel_length+":"+msg+" </div>");
+    }
+
+    function reConnect(panel_id) {
+        somebodyPanel(panel_id)
+    }
+
+    //全屏
+    function fullScreen() {
+        var el = document.documentElement;
+        var rfs = el.requestFullScreen || el.webkitRequestFullScreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+        if (typeof rfs != "undefined" && rfs) {
+            rfs.call(el);
+        }
+
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+        }
+        else if (document.mozCancelFullScreen) {
+            document.mozCancelFullScreen();
+        }
+        else if (document.webkitCancelFullScreen) {
+            document.webkitCancelFullScreen();
+        }
+        else if (document.msExitFullscreen) {
+            document.msExitFullscreen();
+        }
+        if (typeof cfs != "undefined" && cfs) {
+            cfs.call(el);
+        }
+
+        return;
+    }
+
+    //退出全屏
+    function exitScreen() {
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+        }
+        else if (document.mozCancelFullScreen) {
+            document.mozCancelFullScreen();
+        }
+        else if (document.webkitCancelFullScreen) {
+            document.webkitCancelFullScreen();
+        }
+        else if (document.msExitFullscreen) {
+            document.msExitFullscreen();
+        }
+        if (typeof cfs != "undefined" && cfs) {
+            cfs.call(el);
+        }
+    }
+</script>
+</body>
+</html>

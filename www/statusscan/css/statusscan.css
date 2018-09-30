@@ -1,0 +1,26 @@
+
+body{
+    /*padding-top: 70px;*/
+}
+
+.panel-title {
+    font-weight: bold;
+}
+
+.no_mate_win_body{
+    min-height:75vh;
+}
+
+.mate_win_body{
+    height: 36vh;
+}
+
+.body_overflow{
+    overflow-y: auto;
+}
+.height_nav{
+    height: 55px;
+}
+.height_container{
+    min-height:100vh;
+}
