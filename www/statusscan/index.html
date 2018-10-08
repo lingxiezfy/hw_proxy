@@ -34,7 +34,9 @@
                     <div class="panel-heading">
                         <div>
                             <h3 class="panel-title">
-                                姓名(工号)-完成数量: - 状态【 】
+                                <span class="login">姓名(工号)</span>&nbsp;-&nbsp;
+                            完成数量:<span class="num">0</span>&nbsp;-&nbsp;
+                            【<span class="state">状态</span>】
                                 <button class="btn btn-success btn-xs rc_btn" onclick="reConnect('mate_panel_1')">重新连接</button>
                             </h3>
 
@@ -49,11 +51,13 @@
                 <div id="mate_panel_2" class="panel panel-primary">
                     <div class="panel-heading">
                         <h3 class="panel-title">
-                            姓名(工号)-完成数量: - 状态【 】
+                            <span class="login">姓名(工号)</span>&nbsp;-&nbsp;
+                            完成数量:<span class="num">0</span>&nbsp;-&nbsp;
+                            【<span class="state">状态</span>】
                             <button class="btn btn-success btn-xs rc_btn" onclick="reConnect('mate_panel_2')">重新连接</button>
                         </h3>
                     </div>
-                    <div class="panel-body mate_win_body">
+                    <div class="panel-body mate_win_body body_overflow">
                     </div>
                 </div>
             </div>
@@ -63,11 +67,13 @@
                 <div id="mate_panel_3" class="panel panel-primary">
                     <div class="panel-heading">
                         <h3 class="panel-title">
-                            姓名(工号)-完成数量: - 状态【 】
+                            <span class="login">姓名(工号)</span>&nbsp;-&nbsp;
+                            完成数量:<span class="num">0</span>&nbsp;-&nbsp;
+                            【<span class="state">状态</span>】
                             <button class="btn btn-success btn-xs rc_btn" onclick="reConnect('mate_panel_3')">重新连接</button>
                         </h3>
                     </div>
-                    <div class="panel-body mate_win_body">
+                    <div class="panel-body mate_win_body body_overflow">
                     </div>
                 </div>
             </div>
@@ -75,11 +81,13 @@
                 <div id="mate_panel_4" class="panel panel-primary">
                     <div class="panel-heading">
                         <h3 class="panel-title">
-                            姓名(工号)-完成数量: - 状态【 】
+                            <span class="login">姓名(工号)</span>&nbsp;-&nbsp;
+                            完成数量:<span class="num">0</span>&nbsp;-&nbsp;
+                            【<span class="state">状态</span>】
                             <button class="btn btn-success btn-xs rc_btn" onclick="reConnect('mate_panel_4')">重新连接</button>
                         </h3>
                     </div>
-                    <div class="panel-body mate_win_body">
+                    <div class="panel-body mate_win_body body_overflow">
                     </div>
                 </div>
             </div>
@@ -94,23 +102,7 @@
     var host = "localhost";
     var port = "6677";
     var msg_max_count = 40;
-    /*
-    function connect(msg_id) {
-        var ws = new WebSocket("ws://localhost:6677");
-        try {
-            ws.onopen = function (msg) {
-                $('#' + msg_id + '').append("<div>连接成功</div>");
-            };
-            ws.onmessage = function (msg) {
-                $('#' + msg_id + '').append("<div>" + msg.data + "</div>");
-            }
 
-        } catch (e) {
-            console.log(e)
-        }
-    }
-    connect("no_mate_body_id");
-    */
     function somebodyPanel(panel_id) {
         var oPanel = new Object();
         oPanel.panel_id = panel_id;
@@ -123,7 +115,14 @@
             $('#' + oPanel.panel_id + ' .rc_btn').attr("disabled","disabled");
         };
         oPanel.ws.onmessage = function (msg) {
-            add_msg(oPanel.panel_id,msg.data)
+            if(msg.data.toString().indexOf('&') > 0){
+                var msgs = msg.data.toString().split('&');
+                for(var i = 0;i< msgs.length; i++){
+                    deal_one_msg(oPanel.panel_id,msgs[i])
+                }
+            }else {
+                deal_one_msg(oPanel.panel_id,msg.data)
+            }
         };
         /*
         oPanel.ws.onerror = function (msg){
@@ -147,15 +146,39 @@
     panel2 = somebodyPanel("mate_panel_2");
     panel3 = somebodyPanel("mate_panel_3");
     panel4 = somebodyPanel("mate_panel_4");
-
+    
+    function deal_one_msg(panel_id, msg) {
+        var datas = msg.toString().split(':');
+        var op = datas[0];
+        if(op == "login"){
+            $('#' + panel_id + ' .panel-title .login').text(datas[1]+"("+datas[2]+")")
+        }else if(op == "state"){
+            $('#' + panel_id + ' .panel-title .state').text(datas[1])
+        }else if(op == "num"){
+            $('#' + panel_id + ' .panel-title .num').text(datas[1]+"")
+        }else if(op == "msg"){
+            add_msg(panel_id,datas[1])
+        }else  if(op == "error"){
+            add_error(panel_id,datas[1])
+        }else if(op == "cls"){
+            $('#' + panel_id + ' .panel-body').children("div").remove()
+        }
+    }
+    
     function add_msg(panel_id,msg) {
         var panel_length = $('#' + panel_id + ' .panel-body').children("div").length;
         if (panel_length >= msg_max_count){
             $('#' + panel_id + ' .panel-body').children("div")[panel_length -1].remove()
         }
-        $('#' + panel_id + ' .panel-body').prepend("<div>"+panel_length+":"+msg+" </div>");
+        $('#' + panel_id + ' .panel-body').prepend("<div>"+msg+" </div>");
     }
-
+    function add_error(panel_id,error) {
+        var panel_length = $('#' + panel_id + ' .panel-body').children("div").length;
+        if (panel_length >= msg_max_count){
+            $('#' + panel_id + ' .panel-body').children("div")[panel_length -1].remove()
+        }
+        $('#' + panel_id + ' .panel-body').prepend("<div style='color: red'>"+error+" </div>");
+    }
     function reConnect(panel_id) {
         somebodyPanel(panel_id)
     }

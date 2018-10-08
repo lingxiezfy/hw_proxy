@@ -113,14 +113,14 @@ class ResultFactory(ServerFactory):
     # callback for Client connect
     def result_client_connect(self, client_info):
         self.deferreds[1] = self._init_connect_deferred()
-        print("client connected : %s ", client_info)
+        print("client connected : %s " % client_info)
 
     # callback for Result Client lost
     def result_client_lost(self, client_info):
         self.deferreds[2] = self._init_lost_deferred()
         self.unregister_panel_to_proxy(client_info[1], self.mate_result_panel[client_info[0]])
         del self.mate_result_panel[client_info[0]]
-        print("client lost: %s ", client_info)
+        print("client lost: %s " % client_info)
 
     # result can't encode,it should be a str,not bytes
     def result_boadcast_local(self, conn_type, clients, result):

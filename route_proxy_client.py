@@ -12,7 +12,7 @@ import time
 
 
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-address = ("192.168.1.139", 3390)
+address = ("192.168.1.187", 3390)
 i = 0
 while True:
     i += 1
@@ -44,13 +44,13 @@ for u_t in usb_temps:
 print(drives)
 while True:
 
-    d, w, x = select.select(drives, [], [])
+    d, w, x = select.select(drives, [], [], timeout=)
     for dev in d:
         try:
             for result in dev.read():
                 if isinstance(result, evdev.InputEvent):
                     if result.type == evdev.ecodes.EV_KEY and result.value == 0x01:
-                        print(str(evdev.ecodes.KEY[result.code])[4:])
+                        # print(str(evdev.ecodes.KEY[result.code])[4:])
                         # 初始化记录键值缓存
                         if dev.path not in key_recode:
                             key_recode[dev.path] = ""
@@ -76,7 +76,7 @@ while True:
                             # 重置功能键
                             if function_key[dev.path]:
                                 function_key[dev.path] = False
-        except OSError as ose:
+        except IOError as ose:
             print(ose.__repr__())
             del function_key[dev.path]
             del key_recode[dev.path]
