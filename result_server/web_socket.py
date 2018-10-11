@@ -57,6 +57,7 @@ class WebSocketProtocol(protocol.Protocol):
     def sendFramer(self, data):
         # print("will be framer %s " % data)
         framer = self.wsf.pack_framer(data)
+        # print(b"Framer: %s" % framer)
         self.write(framer)
 
     def write(self, data):
@@ -152,7 +153,7 @@ class WebSocketFramer(object):
             # print("data: %s " % self.payload_data)
             return self.payload_data
         elif self.opcode == 8:
-            print("to close the webSocket")
+            # print("to close the webSocket")
             return 8
         else:
             # print("data error")
@@ -163,7 +164,6 @@ class WebSocketFramer(object):
         if isinstance(framer, str):
             framer = framer.encode()
         l = len(framer)
-        # print(l)
         f_fmt = "%ds" % l
         if l == 0:
             return struct.pack("Bb", 129, l)
@@ -217,7 +217,6 @@ class WebSocketFactory(protocol.ServerFactory):
     def boadcast(self, data):
         # print("boadcast: %s " % data)
         for client_item in self.clients.items():
-            print(client_item)
             for client in client_item[1]:
                 self.send_to(client, data)
 
@@ -230,5 +229,15 @@ class WebSocketFactory(protocol.ServerFactory):
         # print("send to %s Later: %s " % (client, data))
         from twisted.internet import reactor
         reactor.callLater(0.01, client.sendFramer, data)
+
+    def stop_connect(self, client):
+        from twisted.internet import reactor
+        reactor.callLater(0.01, client.loseConnection)
+
+    def stop_all_connect(self):
+        for client_item in self.clients.items():
+            for client in client_item[1]:
+                self.stop_connect(client)
+
 
 
