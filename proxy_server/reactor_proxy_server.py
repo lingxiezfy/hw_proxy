@@ -58,15 +58,15 @@ class ProxyServerFactory(ServerFactory):
 
     def __init__(self):
         self.deferred = [self._init_set_deferred(), self._init_lost_deferred(), self._init_result_info_deferred()]
-        self.config = configparser.ConfigParser(delimiters='=')
-        self.config.read(os.path.split(os.path.realpath(__file__))[0] + "/config.conf", encoding="utf-8")
-        # print("create %s" % self.deferred)
+        self.config = config
         self._init_status_history()
 
     def startFactory(self):
         result_factory = ResultClientFactory(self.deferred)
+        result_host = self.config["resultServer"]["result_host"]
+        result_port = int(self.config["resultServer"]["result_port"])
         from twisted.internet import reactor
-        reactor.connectTCP("127.0.0.1", 6690, result_factory)
+        reactor.connectTCP(result_host, result_port, result_factory)
 
     def stopFactory(self):
         logger.info("代理服务程序关闭")
@@ -502,7 +502,8 @@ def main():
     logger.info("代理服务程序启动")
     factory = ProxyServerFactory()
     from twisted.internet import reactor
-    port = reactor.listenTCP(3390, factory)
+    proxy_port = int(config["proxyServer"]["proxy_port"])
+    port = reactor.listenTCP(proxy_port, factory)
     logger.info('Proxy Serving transforms on port %d' % port.getHost().port)
     from twisted.internet import reactor
     reactor.run()
@@ -554,6 +555,8 @@ fh.setFormatter(formatter)
 logger.addHandler(fh)
 # logger.addHandler(ch)
 
+config = configparser.ConfigParser(delimiters='=')
+config.read(os.path.split(os.path.realpath(__file__))[0] + "/config.conf", encoding="utf-8")
 
 if __name__ == '__main__':
     main()

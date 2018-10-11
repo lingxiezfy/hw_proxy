@@ -50,15 +50,14 @@ class ResultFactory(ServerFactory):
                           self._init_lost_deferred()]
         # 目前实现的有webSocket方式
         self.factorys["ws"] = None
-        self.config = configparser.ConfigParser(delimiters='=')
-        self.config.read(os.path.split(os.path.realpath(__file__))[0] + "/config.conf", encoding="utf-8")
+        self.config = config
         self.proxy_conn = None
 
     def startFactory(self):
         # 注册一个 websocket 方式的结果反馈服务
         try:
 
-            ws_port = self.config["WebSocket"]["port"]
+            ws_port = self.config["WebSocket"]["ws_port"]
             panel_limit = int(self.config["WebSocket"]["panelLimit"])
             factory = WebSocketFactory(self.deferreds, panel_limit)
             endpoints.serverFromString(reactor, "tcp:"+ws_port).listen(factory)
@@ -188,8 +187,9 @@ class ResultFactory(ServerFactory):
 
 def main():
     factory = ResultFactory()
+    result_port = int(config["resultServer"]["result_port"])
     from twisted.internet import reactor
-    port = reactor.listenTCP(6690, factory)
+    port = reactor.listenTCP(result_port, factory)
     logger.info('Result Serving start on %s.' % (port.getHost(),))
     reactor.run()
 
@@ -206,6 +206,10 @@ fh.setFormatter(formatter)
 # ch.setFormatter(formatter)
 logger.addHandler(fh)
 # logger.addHandler(ch)
+
+config = configparser.ConfigParser(delimiters='=')
+config.read(os.path.split(os.path.realpath(__file__))[0] + "/config.conf", encoding="utf-8")
+
 
 if __name__ == '__main__':
     main()
