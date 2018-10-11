@@ -6,13 +6,21 @@
 # @Software: PyCharm
 
 import evdev
-import util
+import scan_util
 import socket
 import time
+import configparser
+import os
 
+config = configparser.ConfigParser(delimiters='=')
+config.read(os.path.split(os.path.realpath(__file__))[0] + "/config.conf", encoding="utf-8")
 
+proxy_server_host = config["server"]["host"]
+proxy_server_port = int(config["server"]["port"])
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-address = ("192.168.1.187", 3390)
+address = (proxy_server_host, proxy_server_port)
+
+
 i = 0
 while True:
     i += 1
@@ -35,16 +43,16 @@ function_key = {}
 key_recode = {}
 
 # 初始化usb类键盘设备
-usb_temps = util.get_kbd_input_list()
+usb_temps = scan_util.get_kbd_input_list()
 for u_t in usb_temps:
     if u_t not in kbd_input_list:
         print("新加入设备：%s" % u_t)
-        drives.append(evdev.InputDevice(util.get_kbd_input_dir()+""+u_t))
+        drives.append(evdev.InputDevice(scan_util.get_kbd_input_dir()+""+u_t))
         kbd_input_list.append(u_t)
 print(drives)
 while True:
 
-    d, w, x = select.select(drives, [], [], timeout=)
+    d, w, x = select.select(drives, [], [])
     for dev in d:
         try:
             for result in dev.read():
@@ -72,7 +80,7 @@ while True:
                             key_recode[dev.path] = ""
                         else:
                             # 记录键值
-                            key_recode[dev.path] += util.get_hid_print_key(function_key[dev.path], result.code)
+                            key_recode[dev.path] += scan_util.get_hid_print_key(function_key[dev.path], result.code)
                             # 重置功能键
                             if function_key[dev.path]:
                                 function_key[dev.path] = False
@@ -83,18 +91,18 @@ while True:
             drives.remove(dev)
             # dev.path[len(util.get_kbd_input_dir()):]
             kbd_input_list.remove(dev.path[19:])
-            util.remove_file(dev.path)
+            scan_util.remove_file(dev.path)
             print("接口已拔出: " + dev.path)
         except Exception as e:
             print(e.__repr__())
             print("发生错误")
 
     # 检测新加入的usb类键盘设备
-    usb_temps = util.get_kbd_input_list()
+    usb_temps = scan_util.get_kbd_input_list()
     for u_t in usb_temps:
         if u_t not in kbd_input_list:
             print("新加入设备：%s" % u_t)
-            drives.append(evdev.InputDevice(util.get_kbd_input_dir()+""+u_t))
+            drives.append(evdev.InputDevice(scan_util.get_kbd_input_dir()+""+u_t))
             print(drives)
             kbd_input_list.append(u_t)
 
