@@ -20,7 +20,7 @@
     注：目前实现的是USB接口的输入方式
         当拔插扫描枪之后，等待3秒再进行扫描操作
 2. 运行环境
-    Linux系统
+    Linux系统，Python3
 3. 配置说明
     [proxyServer] -- 需要连接的“数据代理服务中心”
         proxy_host=192.168.1.187 -- 运行数据代理服务中心的主机网络IP地址
@@ -29,14 +29,25 @@
             注：保持和数据代理服务中心（proxy_server）配置中的proxy_port一致
 4. 日志
     日志按天存放在 scan_client/log目录下
+5. 外部依赖python模块，需要安装
+    evdev
+6. 启动
+    linux：
+        进入scan_client项目文件夹，输入命令 ./startup.sh
+        如果提示 Permission denied ，则 需要为 startup.sh 文件添加运行权限 ，使用命令: chmod +x startup.sh
+7. 停止服务
+   linux：
+        进入scan_client项目文件夹，输入命令 ./stop.sh
+        如果提示 Permission denied ，则 需要为 startup.sh 文件添加运行权限 ，使用命令: chmod +x stop.sh
 
 (二) 数据代理服务中心 -- proxy_server
 1. 功能说明
     接收所有“扫描枪控制终端”扫描的条码数据
     处理数据
     打包处理结果，并发送至“消息分发中转站”
+    注：status.xlsx为状态列表文件，若需添加修改或添加状态，修改此文件然后重启本服务
 2. 运行环境说明
-    Linux、Windows
+    Linux、Windows，Python3
 3. 配置说明
     [proxyServer] -- 数据代理服务中心运行的配置
         proxy_port=3390 -- 数据代理服务中心运行的端口
@@ -61,6 +72,18 @@
                     mate_panel_1，mate_panel_2，mate_panel_3，mate_panel_4 在web页面显示分表示为左上，右上，左下，右下四个显示区域
 4. 日志
     日志按天存放在 proxy_server/log 目录下
+5. 外部依赖python模块，需要安装
+    twisted
+    openpyxl
+    pymssql
+6. 启动
+    linux：
+        进入proxy_server项目文件夹，输入命令 ./startup.sh
+        如果提示 Permission denied ，则 需要为 startup.sh 文件添加运行权限 ，使用命令: chmod +x startup.sh
+7. 停止服务
+   linux：
+        进入proxy_server项目文件夹，输入命令 ./stop.sh
+        如果提示 Permission denied ，则 需要为 startup.sh 文件添加运行权限 ，使用命令: chmod +x stop.sh
 
 (三) 消息分发中转站 -- result_server
 1. 功能说明
@@ -68,7 +91,7 @@
     接收由“数据代理服务中心”发送的结果数据包
     将结果数据发送至指定的显示终端
 2  运行环境
-    Linux、Windows
+    Linux、Windows，Python3
 3. 配置说明
     [WebSocket] -- 附属WebSocket服务的配置
         ws_port=6677 -- WebSocket服务运行的端口
@@ -77,6 +100,19 @@
         result_port=6690 -- 消息分发中转站 运行的端口
 4. 日志
     日志按天存放在 result_server/log 目录下
+5. 外部依赖python模块，需要安装
+    twisted
+    zope.interface
+6. 启动
+    linux：
+        进入result_server项目文件夹，输入命令 ./startup.sh
+        如果提示 Permission denied ，则 需要为 startup.sh 文件添加运行权限 ，使用命令: chmod +x startup.sh
+
+7. 停止服务
+   linux：
+        进入result_server项目文件夹，输入命令 ./stop.sh
+        如果提示 Permission denied ，则 需要为 startup.sh 文件添加运行权限 ，使用命令: chmod +x stop.sh
+
 
 (四) 消息显示网页（显示终端） -- www
 1. 功能说明
@@ -85,7 +121,9 @@
 2. 运行环境
     Web浏览器，建议使用Chrome浏览器
 3. 配置说明
-   修改www\statusscan\js\statusscan.js文件中，关于WebSocket服务主机的ip和端口
+   修改www\statusscan\js\statusscan.js文件中关于WebSocket服务主机的ip和端口
    var host = "localhost"; -- 和“消息分发中转站” 网络ip一致，ip的获取参照 获取Ip说明
    var port = "6677"; -- 和“消息分发中转站” 中 ws_port 一致
+   注：web服务已经部署在214服务器，直接修改214服务器上的相应文件即可，无需重启web服务
+      目录位置：/opt/ginotools/www/statusscan/js/
 
