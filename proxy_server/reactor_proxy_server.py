@@ -82,11 +82,15 @@ class ProxyServerFactory(ServerFactory):
 
             input_path = peer_ip+"&"+input_source
 
-            if self.config.has_option(peer_ip, input_path):
-                o = self.config[peer_ip][input_path]
-                if o == '#':
-                    logger.warning("-%s-It isn't set panel to show " % input_path)
-                elif o in self.output_panel:
+            if self.config.has_option("Route", input_path):
+                o = self.config["Route"][input_path]
+                # 更新已被使用的配置
+                # 已经为该路径配置路由，从预选列表中删除
+                if self.config.has_option("input_path", input_path):
+                    self.config.remove_option("input_path", input_path)
+                    with open(real_path + "/config.conf", 'w', encoding="utf-8") as configfile:
+                        self.config.write(configfile)
+                if o in self.output_panel:
                     # 记录该输入路径
                     if input_path not in self.output_panel[o]:
                         self.output_panel[o].append(input_path)
@@ -95,17 +99,14 @@ class ProxyServerFactory(ServerFactory):
                     logger.info("-%s-收到条码-%s-%s" % (input_path, input_keys, msg))
                     self.send_msg_to(o, msg)
                 else:
-                    logger.warning("result panel-%s- is useless" % o)
+                    logger.warning("result panel-%s- is useless : %s" % (o, input_keys))
+            elif self.config.has_option("input_path", input_path):
+                logger.warning("-%s-It isn't set panel to show " % input_path)
             else:
-                logger.info("-%s-new path input " % input_path)
+                logger.info("-%s-new path input : %s" % (input_path, input_keys))
+                self.config["input_path"][input_path] = "#"
 
-                if self.config.has_section(peer_ip):
-                    self.config[peer_ip][input_path] = "#"
-                else:
-                    self.config[peer_ip] = {}
-                    self.config[peer_ip][input_path] = "#"
-
-                with open('config.conf', 'w', encoding="utf-8") as configfile:
+                with open(real_path + "/config.conf", 'w', encoding="utf-8") as configfile:
                     self.config.write(configfile)
         except Exception as e:
             print(e.__repr__())
@@ -177,7 +178,7 @@ class ProxyServerFactory(ServerFactory):
     # 初始化状态条码
     def _init_status_history(self):
         try:
-            wb = openpyxl.load_workbook(os.path.split(os.path.realpath(__file__))[0] + "/status.xlsx", read_only=True)
+            wb = openpyxl.load_workbook(real_path + "/status.xlsx", read_only=True)
             sheet = wb[wb.sheetnames[0]]
             rows = sheet.iter_rows(min_row=2, max_col=2)
             for row in rows:
@@ -196,7 +197,7 @@ class ProxyServerFactory(ServerFactory):
             logger.info("-%s-设置状态成功-%s:%s" % (_path, self.state_recode[_path][0], status))
             return True
         try:
-            wb = openpyxl.load_workbook(os.path.split(os.path.realpath(__file__))[0] + "/status.xlsx", read_only=True)
+            wb = openpyxl.load_workbook(real_path + "/status.xlsx", read_only=True)
             sheet = wb[wb.sheetnames[0]]
             rows = sheet.iter_rows(min_row=len(self.status_history)+1, max_col=2)
             for row in rows:
@@ -317,41 +318,6 @@ class ProxyServerFactory(ServerFactory):
     def pickingbusinessforprint(self, _path, _data):
         pass
 
-    def buid_out_msg(self, _path, jobnum, stroperation, returnmsg):
-        msg = ""
-        if returnmsg != '100':
-            if returnmsg == "501":
-                returnmsg = "镜片已出库"
-            if returnmsg == "502":
-                returnmsg = "镜架已出库"
-            elif returnmsg == "503":
-                returnmsg = "无库存"
-            elif returnmsg == "504":
-                returnmsg = "保留异常"
-            elif returnmsg == "505":
-                returnmsg = "出库动作异常"
-            elif returnmsg == "506":
-                returnmsg = "出库单不存在"
-            elif returnmsg == "507":
-                returnmsg = "生产单不存在"
-            elif returnmsg == "508":
-                returnmsg = "不需要出库"
-
-            msg = now_time() + "-" + jobnum + "-" + stroperation + "-" + returnmsg
-        else:
-            returnmsg = "出库成功"
-
-            self.num_recode[_path] += 1
-
-            if stroperation == "镜片":
-                # 镜片计量
-                stroperation = "片片片"
-            else:
-                # 镜架计量
-                stroperation = "架架架"
-            msg = now_time() + "-" + jobnum + "-" + stroperation + "-" + returnmsg
-        return msg
-
     # 构建显示消息，按照一定的格式构建，消息格式参照 deal_data 消息前缀说明
     def build_status_msg(self, _path, jobnum, returnmsg):
         login_value = self.login_recode[_path]
@@ -396,6 +362,11 @@ class ProxyServerFactory(ServerFactory):
             _op, _panel = data.split('&', maxsplit=1)
             if _op == 'r':
                 self.output_panel[_panel] = []
+                # 更新配置文件
+                # if not self.config.has_option("outer_panel",_panel):
+                #     self.config["outer_panel"][_panel] = "#"
+                #     with open(real_path + "/config.conf", 'w', encoding="utf-8") as configfile:
+                #         self.config.write(configfile)
                 logger.info("register : %s" % _panel)
             elif _op == 'ur':
                 for _path in self.output_panel[_panel]:
@@ -541,9 +512,11 @@ import sys
 #         from twisted.internet import reactor
 #         reactor.run()
 
+real_path = os.path.split(os.path.realpath(__file__))[0]
+
 logger = logging.getLogger('Status')
 logger.setLevel(logging.DEBUG)
-fn = os.path.split(os.path.realpath(__file__))[0] + '/log/' + str(
+fn = real_path + '/log/' + str(
     time.strftime('%Y-%m-%d', time.localtime(time.time()))) + '.log'
 fh = logging.FileHandler(fn, encoding='utf-8')
 fh.setLevel(logging.DEBUG)
@@ -556,7 +529,7 @@ logger.addHandler(fh)
 # logger.addHandler(ch)
 
 config = configparser.ConfigParser(delimiters='=')
-config.read(os.path.split(os.path.realpath(__file__))[0] + "/config.conf", encoding="utf-8")
+config.read(real_path + "/config.conf", encoding="utf-8")
 
 if __name__ == '__main__':
     main()
