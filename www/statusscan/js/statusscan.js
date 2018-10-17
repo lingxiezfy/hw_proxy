@@ -2,6 +2,11 @@
     var port = "6677";
     var msg_max_count = 40;
 
+    var status1 = 0;
+    var status2 = 0;
+    var status3 = 0;
+    var status4 = 0;
+
     function somebodyPanel(panel_id) {
         var oPanel = new Object();
         oPanel.panel_id = panel_id;
@@ -9,9 +14,11 @@
         oPanel.ws.onopen = function (msg) {
             oPanel.ws.send("" + panel_id + "");
             add_msg(oPanel.panel_id,"连接成功");
+
             $('#' + oPanel.panel_id + '').removeClass("panel-danger");
             $('#' + oPanel.panel_id + '').addClass("panel-primary");
             $('#' + oPanel.panel_id + ' .rc_btn').attr("disabled","disabled");
+            $('#' + oPanel.panel_id + ' .status').val(1);
         };
         oPanel.ws.onmessage = function (msg) {
             if(msg.data.toString().indexOf('&') > 0){
@@ -35,10 +42,11 @@
         };
         */
         oPanel.ws.onclose = function (msg) {
-            add_msg(oPanel.panel_id,"连接丢失");
+            add_msg(oPanel.panel_id,"连接丢失,等待重连..");
             $('#' + oPanel.panel_id + '').removeClass("panel-primary");
             $('#' + oPanel.panel_id + '').addClass("panel-danger");
             $('#' + oPanel.panel_id + ' .rc_btn').removeAttr("disabled");
+            $('#' + oPanel.panel_id + ' .status').val(-1);
         };
         return oPanel;
     }
@@ -92,6 +100,7 @@
         $('#' + panel_id + ' .panel-body').prepend("<div style='color: red'>"+error+" </div>");
     }
     function reConnect(panel_id) {
+        add_error(panel_id, "正在重新连接");
         somebodyPanel(panel_id)
     }
 
@@ -140,3 +149,20 @@
             cfs.call(el);
         }
     }
+
+    function connect_roop(){
+        if($('#mate_panel_1 .status').val() != 1){
+            reConnect('mate_panel_1');
+        }
+        if($('#mate_panel_2 .status').val() != 1){
+            reConnect('mate_panel_2');
+        }
+        if($('#mate_panel_3 .status').val() != 1){
+            reConnect('mate_panel_3');
+        }
+        if($('#mate_panel_4 .status').val() != 1){
+            reConnect('mate_panel_4');
+        }
+    }
+
+    setInterval(connect_roop,5000);
