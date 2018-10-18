@@ -2,11 +2,6 @@
     var port = "6677";
     var msg_max_count = 40;
 
-    var status1 = 0;
-    var status2 = 0;
-    var status3 = 0;
-    var status4 = 0;
-
     function somebodyPanel(panel_id) {
         var oPanel = new Object();
         oPanel.panel_id = panel_id;
@@ -100,7 +95,7 @@
         $('#' + panel_id + ' .panel-body').prepend("<div style='color: red'>"+error+" </div>");
     }
     function reConnect(panel_id) {
-        add_error(panel_id, "正在重新连接");
+        add_error(panel_id, "正在重新连接-host:"+host+"-port:"+port);
         somebodyPanel(panel_id)
     }
 
@@ -164,5 +159,4 @@
             reConnect('mate_panel_4');
         }
     }
-
     setInterval(connect_roop,5000);
