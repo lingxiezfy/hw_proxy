@@ -14,7 +14,7 @@ from twisted.internet.protocol import ServerFactory
 from twisted.protocols.basic import LineReceiver
 from twisted.internet import defer
 from twisted.internet import reactor, endpoints
-
+from logging.handlers import TimedRotatingFileHandler
 from web_socket import WebSocketFactory
 
 
@@ -193,19 +193,19 @@ def main():
     logger.info('Result Serving start on %s.' % (port.getHost(),))
     reactor.run()
 
+
 logger = logging.getLogger('Result')
 logger.setLevel(logging.DEBUG)
-fn = os.path.split(os.path.realpath(__file__))[0] + '/log/' + str(
-    time.strftime('%Y-%m-%d', time.localtime(time.time()))) + '.log'
-fh = logging.FileHandler(fn, encoding='utf-8')
+
+real_path = os.path.split(os.path.realpath(__file__))[0]
+fn = real_path + '/log/log.log'
+
+fh = TimedRotatingFileHandler(fn, when='D', interval=1, backupCount=10, encoding='utf-8')
+# fh = logging.FileHandler(fn, encoding='utf-8')
 fh.setLevel(logging.DEBUG)
-# ch = logging.StreamHandler()
-# ch.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 fh.setFormatter(formatter)
-# ch.setFormatter(formatter)
 logger.addHandler(fh)
-# logger.addHandler(ch)
 
 config = configparser.ConfigParser(delimiters='=')
 config.read(os.path.split(os.path.realpath(__file__))[0] + "/config.conf", encoding="utf-8")

@@ -18,6 +18,7 @@ import configparser
 import openpyxl
 import time
 import logging
+from logging.handlers import TimedRotatingFileHandler
 import os
 
 
@@ -512,21 +513,19 @@ import sys
 #         from twisted.internet import reactor
 #         reactor.run()
 
-real_path = os.path.split(os.path.realpath(__file__))[0]
 
-logger = logging.getLogger('Status')
+logger = logging.getLogger('Proxy')
 logger.setLevel(logging.DEBUG)
-fn = real_path + '/log/' + str(
-    time.strftime('%Y-%m-%d', time.localtime(time.time()))) + '.log'
-fh = logging.FileHandler(fn, encoding='utf-8')
+
+real_path = os.path.split(os.path.realpath(__file__))[0]
+fn = real_path + '/log/log.log'
+
+fh = TimedRotatingFileHandler(fn, when='D', interval=1, backupCount=10, encoding='utf-8')
+# fh = logging.FileHandler(fn, encoding='utf-8')
 fh.setLevel(logging.DEBUG)
-# ch = logging.StreamHandler()
-# ch.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 fh.setFormatter(formatter)
-# ch.setFormatter(formatter)
 logger.addHandler(fh)
-# logger.addHandler(ch)
 
 config = configparser.ConfigParser(delimiters='=')
 config.read(real_path + "/config.conf", encoding="utf-8")
