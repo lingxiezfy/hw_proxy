@@ -46,7 +46,7 @@ def connect_proxy_loop():
         if not rc:
             logger.info("连接代理服务器成功 %s " % s)
             return True
-            logger.info("连接代理服务器失败,第%d次尝试" % i)
+        logger.info("连接代理服务器失败,第%d次尝试" % i)
         time.sleep(10)
 
 
@@ -62,7 +62,6 @@ function_key = {}
 key_recode = {}
 
 
-
 # 扫描usb类键盘设备
 def get_drivers():
     usb_temps = scan_util.get_kbd_input_list()
@@ -74,9 +73,11 @@ def get_drivers():
 
 
 get_drivers()
+
+logger.info("程序开始监听")
 while True:
 
-    d, w, x = select.select(drives, [], [], 3)
+    d, w, x = select.select(drives, [], [], 2)
     if proxy_is_connected:
         for dev in d:
             try:

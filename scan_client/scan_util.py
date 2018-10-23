@@ -6,6 +6,7 @@
 # @Software: PyCharm
 
 import os
+import re
 
 kbd_input_path = "/dev/input/by-path/"
 
@@ -21,14 +22,19 @@ def get_kbd_input_dir():
 def remove_file(path):
     try:
         os.remove(path)
-    except Exception as e:
+    except:
         pass
+
 
 def get_kbd_input_list():
     try:
-        return os.listdir(kbd_input_path)
+        input_list = os.listdir(kbd_input_path)
     except FileNotFoundError:
         return []
+    k_list = []
+    for input_item in input_list:
+        k_list.append(input_item) if re.match(r"pci-.*?-usb-.*?-event-kbd", input_item, re.I) else None
+    return k_list
 
 
 def _make_file_path(path, filename):
