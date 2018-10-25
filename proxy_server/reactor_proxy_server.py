@@ -222,6 +222,13 @@ class ProxyServerFactory(ServerFactory):
         else:
             return False
 
+    # 判断是否为生产单号
+    def is_job_num(self, value):
+        if len(value) == 10:
+            return True
+        else:
+            return False
+
     # 返回值前缀说明：
     #     login:登录信息,数据格式为："login:用户名:工号"
     #     num:扫描总数,数据格式为："num:数量"
@@ -244,7 +251,7 @@ class ProxyServerFactory(ServerFactory):
                 return "state:%s&num:0&cls:1&info:设置状态成功" % self.state_recode[_path][0]
             else:
                 return "error:未登录"
-        else:
+        elif self.is_job_num(_data):
             state_value = self.state_recode.get(_path, None)
             if login_value is None:
                 return "error:未登录"
@@ -257,6 +264,8 @@ class ProxyServerFactory(ServerFactory):
                     return self.pickingbusinessforstatus(_path, _data)
                 else:
                     return self.pickingbusinessforprint(_path, _data)
+        else:
+            return "error:"+now_time() + "-" + _data + "-" + "条码未设置使用"
 
     def pickingbusiness(self, _path, _data):
         pass
