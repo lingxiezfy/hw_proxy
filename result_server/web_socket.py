@@ -38,7 +38,10 @@ class WebSocketProtocol(protocol.Protocol):
                 else:
                     # print("received from %s : %s." % (self.getPeer(), result))
                     # do some thing
-                    self._pull_data(result)
+                    if result == "Ping":
+                        self.sendFramer("Pong")
+                    else:
+                        self._pull_data(result)
                     # hear do echo also
                     # self.sendFramer(result)
         else:
@@ -185,7 +188,7 @@ class WebSocketFactory(protocol.ServerFactory):
         self.every_client_limit = every_client_limit
 
     def buildProtocol(self, addr):
-        if len(self.clients.get(addr.host, [])) < 4:
+        if len(self.clients.get(addr.host, [])) < self.every_client_limit:
             p = self.protocol()
             p.factory = self
             return p
