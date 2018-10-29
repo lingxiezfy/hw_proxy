@@ -197,23 +197,24 @@ class ProxyServerFactory(ServerFactory):
             self.num_recode[_path] = 0
             logger.info("-%s-设置状态成功-%s:%s" % (_path, self.state_recode[_path][0], status))
             return True
-        try:
-            wb = openpyxl.load_workbook(real_path + "/status.xlsx", read_only=True)
-            sheet = wb[wb.sheetnames[0]]
-            rows = sheet.iter_rows(min_row=len(self.status_history)+1, max_col=2)
-            for row in rows:
-                self.status_history[row[0].value] = row[1].value
-                for c in row:
-                    if status == c.value:
-                        self.state_recode[_path] = (sheet.cell(row=c.row, column=2).value, c.value)
-                        self.num_recode[_path] = 0
-                        logger.info("-%s-设置状态成功-%s:%s" % (_path, self.state_recode[_path][0], status))
-                        wb.close()
-                        return True
-            wb.close()
-            return False
-        except Exception as e:
-            return False
+        return False
+        # try:
+        #     wb = openpyxl.load_workbook(real_path + "/status.xlsx", read_only=True)
+        #     sheet = wb[wb.sheetnames[0]]
+        #     rows = sheet.iter_rows(min_row=len(self.status_history)+1, max_col=2)
+        #     for row in rows:
+        #         self.status_history[row[0].value] = row[1].value
+        #         for c in row:
+        #             if status == c.value:
+        #                 self.state_recode[_path] = (sheet.cell(row=c.row, column=2).value, c.value)
+        #                 self.num_recode[_path] = 0
+        #                 logger.info("-%s-设置状态成功-%s:%s" % (_path, self.state_recode[_path][0], status))
+        #                 wb.close()
+        #                 return True
+        #     wb.close()
+        #     return False
+        # except Exception as e:
+        #     return False
 
     # 判断是否为状态条码
     def is_state_value(self, _path, value):
