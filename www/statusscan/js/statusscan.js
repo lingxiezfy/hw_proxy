@@ -1,4 +1,4 @@
-    var host = "192.168.1.187";
+    var host = "192.168.1.214";
     var port = "6677";
     var msg_max_count = 40;
 
@@ -54,7 +54,7 @@
             console.clear();
         };
         oPanel.heartCheck = {
-            timeout: 10000,
+            timeout: 60000,
             checkObj: null,
             timeoutObj: null,
             reset: function(){
