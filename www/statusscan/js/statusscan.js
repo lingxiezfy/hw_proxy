@@ -14,7 +14,7 @@
         oPanel.keepalive = 1;
 
         oPanel.ws = new WebSocket("ws://" + host + ":" + port + "");
-        
+        add_msg(oPanel.panel_id,"正在连接 - host: "+host+" - port: " +port);
         oPanel.ws.onopen = function (msg) {
             oPanel.ws.send("" + panel_id + "");
             add_msg(oPanel.panel_id,"连接成功");
@@ -45,7 +45,7 @@
         //     $('#' + oPanel.panel_id + '').addClass("panel-danger");
         // };
         oPanel.ws.onclose = function (msg) {
-            add_msg(oPanel.panel_id,"连接丢失,等待重连..");
+            add_error(oPanel.panel_id,"连接丢失,等待重连..");
             oPanel.panel.removeClass("panel-primary");
             oPanel.panel.addClass("panel-danger");
             oPanel.reBtn.removeAttr("disabled");
@@ -64,7 +64,6 @@
             },
             start: function(){
                 this.timeoutObj = setTimeout(function(){
-                    // console.log("ping");
                     oPanel.keepalive = 0;
                     oPanel.ws.send('Ping');
                     oPanel.heartCheck.check();
@@ -139,7 +138,6 @@
 
     function reConnect(panel_id) {
         if($('#' + panel_id + ' .status').val() == -1){
-            add_error(panel_id, "正在重新连接 - host:"+host+" - port:"+port);
             $('#' + panel_id + ' .status').val(0);
             somebodyPanel(panel_id)
         }else {
@@ -147,60 +145,10 @@
         }
     }
 
-    //全屏
-    function fullScreen() {
-        var el = document.documentElement;
-        var rfs = el.requestFullScreen || el.webkitRequestFullScreen || el.mozRequestFullScreen || el.msRequestFullscreen;
-        if (typeof rfs != "undefined" && rfs) {
-            rfs.call(el);
-        }
-
-        if (document.exitFullscreen) {
-            document.exitFullscreen();
-        }
-        else if (document.mozCancelFullScreen) {
-            document.mozCancelFullScreen();
-        }
-        else if (document.webkitCancelFullScreen) {
-            document.webkitCancelFullScreen();
-        }
-        else if (document.msExitFullscreen) {
-            document.msExitFullscreen();
-        }
-        if (typeof cfs != "undefined" && cfs) {
-            cfs.call(el);
-        }
-
-        return;
-    }
-
-    //退出全屏
-    function exitScreen() {
-        if (document.exitFullscreen) {
-            document.exitFullscreen();
-        }
-        else if (document.mozCancelFullScreen) {
-            document.mozCancelFullScreen();
-        }
-        else if (document.webkitCancelFullScreen) {
-            document.webkitCancelFullScreen();
-        }
-        else if (document.msExitFullscreen) {
-            document.msExitFullscreen();
-        }
-        if (typeof cfs != "undefined" && cfs) {
-            cfs.call(el);
-        }
-    }
-
     var panel1 = somebodyPanel("mate_panel_1");
-    add_msg(panel1.panel_id,"正在连接 - host: "+host+" - port: " +port);
     var panel2 = somebodyPanel("mate_panel_2");
-    add_msg(panel2.panel_id,"正在连接 - host: "+host+" - port: " +port);
     var panel3 = somebodyPanel("mate_panel_3");
-    add_msg(panel3.panel_id,"正在连接 - host: "+host+" - port: " +port);
     var panel4 = somebodyPanel("mate_panel_4");
-    add_msg(panel4.panel_id,"正在连接 - host: "+host+" - port: " +port);
 
     function connect_loop(){
         if($('#mate_panel_1 .status').val() == -1){
