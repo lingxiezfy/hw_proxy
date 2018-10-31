@@ -7,7 +7,7 @@
         var oPanel = new Object();
         oPanel.panel_id = panel_id;
 
-        oPanel.panel = $('#' + oPanel.panel_id + '');
+        oPanel.panel = $('#' + oPanel.panel_id + ' .panel');
         oPanel.reBtn = $('#' + oPanel.panel_id + ' .rc_btn');
         oPanel.conn_status = $('#' + oPanel.panel_id + ' .status');
         oPanel.reBtn.attr("onclick","reConnect('"+oPanel.panel_id+"')");
@@ -36,14 +36,6 @@
                 deal_one_msg(oPanel.panel_id,msg.data)
             }
         };
-        // oPanel.ws.onerror = function (msg){
-        //     console.log("ss");
-        //     console.log(WebSocket.CLOSED +":"+WebSocket.CLOSING+":"+WebSocket.CONNECTING+":"+WebSocket.OPEN)
-        //     console.log(oPanel.ws.readyState);
-        //     add_msg(oPanel.panel_id,"通讯失败");
-        //     $('#' + oPanel.panel_id + '').removeClass("panel-primary");
-        //     $('#' + oPanel.panel_id + '').addClass("panel-danger");
-        // };
         oPanel.ws.onclose = function (msg) {
             add_error(oPanel.panel_id,"连接丢失,等待重连..");
             oPanel.panel.removeClass("panel-primary");
@@ -93,7 +85,6 @@
     }
 
     function deal_one_msg(panel_id, msg) {
-        // console.log(msg);
         var first_sp =  msg.toString().indexOf(':');
         var op = msg.toString().substring(0,first_sp);
         var less_msg = msg.toString().substring(first_sp+1);
@@ -111,6 +102,8 @@
             add_error(panel_id,less_msg)
         }else if(op == "info"){
             add_info(panel_id,less_msg)
+        }else {
+            add_error(panel_id,msg)
         }
     }
 

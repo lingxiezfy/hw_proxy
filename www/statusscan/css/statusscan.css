@@ -5,16 +5,20 @@ body{
 
 .panel-title {
     font-weight: bold;
+    font-size: 1.5vw;
 }
-
-.no_mate_win_body{
-    min-height:75vh;
-}
-
 .mate_win_body{
     height: 36vh;
+    font-size: 1.1vw;
 }
-
+@media (min-width: 1250px) {
+    .panel-title {
+        font-size: 21px;
+    }
+    .mate_win_body{
+        font-size: 17px;
+    }
+}
 .body_overflow{
     overflow-y: auto;
 }
