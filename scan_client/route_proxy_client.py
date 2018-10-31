@@ -35,20 +35,22 @@ proxy_port = int(config["proxyServer"]["proxy_port"])
 max_data_length = int(config["scanClient"]["max_data_length"])
 
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+s.setblocking(False)
 proxy_is_connected = False
 
 
 def connect_proxy_loop():
     address = (proxy_host, proxy_port)
     i = 0
+    logger.info("正在连接代理服务器 host:%s - port:%s " % (proxy_host, proxy_port))
     while True:
         i += 1
         rc = s.connect_ex(address)
         if not rc:
             logger.info("连接代理服务器 host:%s - port:%s 成功 %s " % (proxy_host, proxy_port, s))
             return True
-        logger.info("连接代理服务器 host:%s - port:%s 失败,第%d次尝试" % (proxy_host, proxy_port, i))
-        time.sleep(10)
+        time.sleep(2)
 
 
 proxy_is_connected = connect_proxy_loop()
@@ -62,6 +64,7 @@ kbd_input_list = []
 function_key = {}
 key_recode = {}
 
+data_queues = []
 
 # 扫描usb类键盘设备
 def get_drivers():
@@ -80,6 +83,7 @@ while True:
 
     d, w, x = select.select(drives, [], [], 2)
     if proxy_is_connected:
+        # 获取扫描枪输入
         for dev in d:
             try:
                 for result in dev.read():
@@ -97,6 +101,7 @@ while True:
                                 function_key[dev.path] = True
                             elif result.code == 28:
                                 key_str = key_recode[dev.path]
+
                                 # 向代理服务发送数据包
                                 packet = struct.pack("3s60s20s", "kbd".encode("utf-8"),
                                                      dev.path[19:].encode("utf-8"),
@@ -105,8 +110,16 @@ while True:
                                 # 置空键值缓存
                                 key_recode[dev.path] = ""
                                 try:
-                                    s.send(packet)
-                                    logger.info("发送数据 - %s - %s" % (dev.path[19:], key_str))
+                                    s.recv(1)
+                                    is_conn = False
+                                    logger.error("探测代理服务器失败，代理服务器丢失 %s " % s)
+                                    proxy_is_connected = False
+                                except:
+                                    is_conn = True
+                                try:
+                                    if is_conn:
+                                        s.send(packet)
+                                        logger.info("发送数据 - %s - %s" % (dev.path[19:], key_str))
                                 except Exception as e:
                                     logger.error("丢失代理服务器 %s " % s)
                                     proxy_is_connected = False
@@ -139,6 +152,8 @@ while True:
         get_drivers()
     else:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        s.setblocking(False)
         proxy_is_connected = connect_proxy_loop()
 
 
