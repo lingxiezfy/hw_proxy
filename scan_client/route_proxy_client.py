@@ -32,6 +32,7 @@ logger.addHandler(fh)
 
 proxy_host = config["proxyServer"]["proxy_host"]
 proxy_port = int(config["proxyServer"]["proxy_port"])
+max_data_length = int(config["scanClient"]["max_data_length"])
 
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 proxy_is_connected = False
@@ -44,9 +45,9 @@ def connect_proxy_loop():
         i += 1
         rc = s.connect_ex(address)
         if not rc:
-            logger.info("连接代理服务器成功 %s " % s)
+            logger.info("连接代理服务器 host:%s - port:%s 成功 %s " % (proxy_host, proxy_port, s))
             return True
-        logger.info("连接代理服务器失败,第%d次尝试" % i)
+        logger.info("连接代理服务器 host:%s - port:%s 失败,第%d次尝试" % (proxy_host, proxy_port, i))
         time.sleep(10)
 
 
@@ -105,6 +106,7 @@ while True:
                                 key_recode[dev.path] = ""
                                 try:
                                     s.send(packet)
+                                    logger.info("发送数据 - %s - %s" % (dev.path[19:], key_str))
                                 except Exception as e:
                                     logger.error("丢失代理服务器 %s " % s)
                                     proxy_is_connected = False
@@ -112,6 +114,10 @@ while True:
                             else:
                                 # 记录键值
                                 key_recode[dev.path] += scan_util.get_hid_print_key(function_key[dev.path], result.code)
+                                # 清除脏数据
+                                if len(key_recode[dev.path]) == max_data_length:
+                                    logger.info("清除数据 - %s - %s" % (dev.path[19:], key_recode[dev.path]))
+                                    key_recode[dev.path] = ""
                                 # 重置功能键
                                 if function_key[dev.path]:
                                     function_key[dev.path] = False

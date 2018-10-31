@@ -39,7 +39,7 @@ class ProxyProtocol(LineReceiver):
     # 连接丢失时的回调
     def connectionLost(self, reason):
         logger.error("扫描枪管理客户端连接丢失：%s" % (self.transport.getPeer(),))
-        self.transport.loseConnection()
+        self.transport.abortConnection()
         pass
 
 
@@ -80,8 +80,14 @@ class ProxyServerFactory(ServerFactory):
             input_type = _type.decode("utf-8").rstrip('\0')
             input_source = _source.decode("utf-8").rstrip('\0')
             input_keys = _keys.decode("utf-8").rstrip('\0')
+            if '-' in input_keys:
+                pre_key = input_keys.split('-')[0]
+                key_data = input_keys.split('-')[1]
+            else:
+                pre_key = "000"
+                key_data = input_keys
 
-            input_path = peer_ip+"&"+input_source
+            input_path = peer_ip+"&"+input_source+"&"+pre_key
 
             if self.config.has_option("Route", input_path):
                 o = self.config["Route"][input_path]
@@ -96,15 +102,15 @@ class ProxyServerFactory(ServerFactory):
                     if input_path not in self.output_panel[o]:
                         self.output_panel[o].append(input_path)
                     # 向配置的面板发送消息
-                    msg = self.deal_data(input_path, input_keys)
-                    logger.info("-%s-收到条码-%s-%s" % (input_path, input_keys, msg))
+                    msg = self.deal_data(input_path, key_data)
+                    logger.info(" %s-收到条码-%s-%s" % (input_path, input_keys, msg))
                     self.send_msg_to(o, msg)
                 else:
-                    logger.warning("result panel-%s- is useless : %s" % (o, input_keys))
+                    logger.warning(" panel: -%s- 未使用 : %s" % (o, input_keys))
             elif self.config.has_option("input_path", input_path):
-                logger.warning("-%s-It isn't set panel to show " % input_path)
+                logger.warning(" %s- 未设置结果展示的panel " % input_path)
             else:
-                logger.info("-%s-new path input : %s" % (input_path, input_keys))
+                logger.info(" %s - 新输入路径 : %s" % (input_path, input_keys))
                 self.config["input_path"][input_path] = "#"
 
                 with open(real_path + "/config.conf", 'w', encoding="utf-8") as configfile:
@@ -378,7 +384,7 @@ class ProxyServerFactory(ServerFactory):
                 #     self.config["outer_panel"][_panel] = "#"
                 #     with open(real_path + "/config.conf", 'w', encoding="utf-8") as configfile:
                 #         self.config.write(configfile)
-                logger.info("register : %s" % _panel)
+                logger.info("panel注册 : %s" % _panel)
             elif _op == 'ur':
                 for _path in self.output_panel[_panel]:
                     self.login_recode[_path] = None
@@ -386,11 +392,11 @@ class ProxyServerFactory(ServerFactory):
                     self.num_recode[_path] = 0
                     self.scan_history[_path] = []
                 del self.output_panel[_panel]
-                logger.info(" un register : %s" % _panel)
+                logger.info("panel 注销 : %s" % _panel)
             else:
-                raise Exception("error op : %s " % _op)
+                raise Exception("错误指令 : %s " % _op)
         except Exception as e:
-            logger.error("result panel error %s " % e.__repr__())
+            logger.error("处理panel时发生错误: %s " % e.__repr__())
 
     def _init_set_deferred(self):
         d = defer.Deferred()
@@ -426,7 +432,7 @@ class ProxyServerFactory(ServerFactory):
     # 消息格式参照 deal_data 消息前缀说明
     def send_result(self, result):
         if self.result_protocol is None:
-            logger.error("Result server is not connect")
+            logger.error("Result server 未连接")
         else:
             from twisted.internet import reactor
             reactor.callLater(0.01, self.result_protocol.send_result, result)
@@ -468,25 +474,25 @@ class ResultClientFactory(ReconnectingClientFactory):
 
     def connect_success(self, p):
         self.deferred[0].callback(p)
-        logger.info("Connected to Result Server and callback to set protocol")
+        logger.info("连接Result Server成功，正在配置传输协议")
 
     def clientConnectionFailed(self, connector, reason):
-        logger.error("Connect to result server failure, waiting for reconnect...")
+        logger.error("连接Result Server失败, 等待重连...")
         ReconnectingClientFactory.clientConnectionFailed(self, connector, reason)
 
     def clientConnectionLost(self, connector, unused_reason):
         ReconnectingClientFactory.clientConnectionLost(self, connector, unused_reason)
-        logger.error("Lost Connection from result server, waiting for reconnect...")
+        logger.error("丢失Result Server连接, 等待重连...")
         self.deferred[1].errback(unused_reason)
 
 
 def main():
-    logger.info("代理服务程序启动")
+    logger.info("代理服务（Proxy Server）启动")
     factory = ProxyServerFactory()
     from twisted.internet import reactor
     proxy_port = int(config["proxyServer"]["proxy_port"])
     port = reactor.listenTCP(proxy_port, factory)
-    logger.info('Proxy Serving transforms on port %d' % port.getHost().port)
+    logger.info('Proxy Serving 监听端口（proxy_port）： %d' % port.getHost().port)
     from twisted.internet import reactor
     reactor.run()
 
