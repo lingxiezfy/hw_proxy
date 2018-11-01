@@ -23,6 +23,9 @@ function init() {
                 panel_index++;
             }
             make_panels()
+        },
+        error:function () {
+            $('#panel_s').append('<div class="mate_panel" style="color: red;text-align: center"><span>获取配置失败，请刷新后再试！</span></div>>');
         }
     })
 }
@@ -64,6 +67,7 @@ function built_panel(index) {
     panel_html = '<div id="panel_' + index + '" class="mate_panel">\n' +
         '                <div class="panel panel-danger">\n' +
         '                    <input class="status" type="hidden" value="0"/>\n' +
+        '                    <input class="rc_flag" type="hidden" value="1"/>\n' +
         '                    <div class="panel-heading">\n' +
         '                        <h3 class="panel-title">\n' +
         '                            <span class="login">未登录()</span>&nbsp;-&nbsp;\n' +
@@ -77,7 +81,9 @@ function built_panel(index) {
         '                </div>\n' +
         '            </div>';
     $('#panel_s').append(panel_html);
-    panel_list.push(somebodyPanel('panel_'+index));
+    var panel_id = 'panel_'+index
+    panel_list.push(panel_id);
+    somebodyPanel(panel_id)
 }
 
 function somebodyPanel(panel_id) {
@@ -89,7 +95,6 @@ function somebodyPanel(panel_id) {
     oPanel.conn_status = $('#' + oPanel.panel_id + ' .status');
     oPanel.reBtn.attr("onclick", "reConnect('" + oPanel.panel_id + "')");
     oPanel.keepalive = 1;
-
     oPanel.ws = new WebSocket("ws://" + host + ":" + port + "");
     add_msg(oPanel.panel_id, "正在连接 - host: " + host + " - port: " + port);
     oPanel.ws.onopen = function (msg) {
@@ -114,7 +119,9 @@ function somebodyPanel(panel_id) {
         }
     };
     oPanel.ws.onclose = function (msg) {
-        add_error(oPanel.panel_id, "连接丢失,等待重连..");
+        if($('#' + panel_id + ' .rc_flag').val() == 1) {
+            add_error(oPanel.panel_id, "连接丢失,等待重连..");
+        }
         oPanel.panel.removeClass("panel-primary");
         oPanel.panel.addClass("panel-danger");
         oPanel.reBtn.removeAttr("disabled");
@@ -123,7 +130,7 @@ function somebodyPanel(panel_id) {
         console.clear();
     };
     oPanel.heartCheck = {
-        timeout: 60000,
+        timeout: 120000,
         checkObj: null,
         timeoutObj: null,
         reset: function () {
@@ -141,10 +148,8 @@ function somebodyPanel(panel_id) {
         check: function () {
             this.checkObj = setTimeout(function () {
                 if (oPanel.keepalive == 1) {
-                    // console.log("check ok next");
                     oPanel.heartCheck.reset();
                 } else {
-                    // console.log("check error close");
                     add_error(oPanel.panel_id, "与主机连接中断,请等待重连  - host:" + host + " - port:" + port);
                     oPanel.panel.removeClass("panel-primary");
                     oPanel.panel.addClass("panel-danger");
@@ -179,7 +184,10 @@ function deal_one_msg(panel_id, msg) {
         add_error(panel_id, less_msg)
     } else if (op == "info") {
         add_info(panel_id, less_msg)
-    } else {
+    } else if (op == "stop") {
+        $('#' + panel_id + ' .rc_flag').val(0);
+        add_error(panel_id, less_msg);
+    }else {
         add_error(panel_id, msg)
     }
 }
@@ -209,22 +217,28 @@ function add_error(panel_id, error) {
 }
 
 function reConnect(panel_id) {
-    if ($('#' + panel_id + ' .status').val() == -1) {
-        $('#' + panel_id + ' .status').val(0);
-        somebodyPanel(panel_id)
-    } else {
-        add_error(panel_id, "已有正在尝试的连接，请等待...");
+    if($('#' + panel_id + ' .rc_flag').val() == 1){
+        if ($('#' + panel_id + ' .status').val() == -1) {
+            $('#' + panel_id + ' .status').val(0);
+            somebodyPanel(panel_id)
+        } else {
+            add_error(panel_id, "已有正在尝试的连接，请等待...");
+        }
+    }else {
+        add_error(panel_id, "已有终止本窗口服务，请关闭本页面");
     }
 }
 
 function connect_loop(){
     var panel_index = 0;
     while (panel_index < panel_size) {
-        var panel = panel_list[panel_index];
-        if(panel.conn_status.val() == -1){
-            reConnect(panel.panel_id);
+        var panel_id = panel_list[panel_index];
+        if($('#' + panel_id + ' .rc_flag').val() == 1) {
+            if ($('#' + panel_id + ' .status').val() == -1) {
+                reConnect(panel_id);
+            }
         }
         panel_index++;
     }
 }
-setInterval(connect_loop,5000);
+setInterval(connect_loop,10000);
