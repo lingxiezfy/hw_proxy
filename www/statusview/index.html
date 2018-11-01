@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+    <title>订单状态查看</title>
+    <link rel="icon" href="icon/statusview.ico">
+    <!-- 引入bootstrap3 -->
+    <link href="../css/bootstrap.min.css" rel="stylesheet"/>
+    <!-- 引入bPage对bootstrap3支持 -->
+    <link rel="stylesheet" href="css/b.page.bootstrap3.css" type="text/css"/>
+    <!-- 日期选择 -->
+    <link rel="stylesheet" href="css/flatpickr.min.css" type="text/css"/>
+    <link rel="stylesheet" href="css/statusview.css" type="text/css"/>
+</head>
+<body>
+<nav class="navbar navbar-inverse navbar-fixed-top">
+    <div class="container-fluid">
+        <div class="navbar-header">
+            <span class="navbar-brand" id="header_title">当前订单</span>
+        </div>
+        <div id="navbar" class="navbar-collapse collapse">
+            <ul class="nav navbar-nav navbar-right">
+                <li><a href="../">返回主页</a></li>
+                <li><a href="../statusscan">状态扫描</a></li>
+                <li><a href="#" onclick="now_order()">当前订单</a></li>
+                <li><a href="#" onclick="hoistory_order()">历史订单查询(3天前)</a></li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-sm-3 col-md-2 sidebar">
+                <div class="form-group hidden_true">
+                    <label>客户号</label>
+                    <input id="CustNumb" name="CustNumb" type="text" class="form-control" aria-label="...">
+                </div>
+                <div class="form-group">
+                    <label>生产单号</label>
+                    <input id="OrdNumbH" name="OrdNumbH" type="text" class="form-control" aria-label="...">
+                </div>
+                <div class="form-group hidden_true">
+                    <label>客户订单号</label>
+                    <input id="Reference" name="Reference" type="text" class="form-control" aria-label="...">
+                </div>
+                <div class="form-group hidden_true">
+                    <label>当前状态</label>
+                    <input id="Status" name="Status" type="text" class="form-control" aria-label="...">
+                </div>
+                <div class="form-group hidden_true">
+                    <label>创建日期</label>
+                    <input id="EntryDate" name="EntryDate" class="flatpickr flatpickr-input form-control" data-max-date=today type="text" placeholder="选择日期">
+                </div>
+                <div>
+                    <button class="btn btn-default" id="search_btn" onclick="search_commit()">点击查询</button>
+                </div>
+                <div>
+                    <h4 class="msg_red" id="msg_info"></h4>
+                </div>
+
+        </div>
+        <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
+            <div id="order_list">
+                <!--<a name="#list_mp">&nbsp;</a>-->
+            <div class="row sub-header">
+                <div class="col-md-2"><h3 class="margin_top_20">订单列表</h3></div>
+                <div class="col-md-10"><div class="margin_top_10" id="orderPage"></div></div>
+            </div>
+
+            <div class="table-responsive">
+                <table id="orderListTable" class="table table-striped table-bordered table-hover table-condensed">
+                    <thead>
+                        <tr>
+                            <th>序号</th>
+                            <th>客户号</th>
+                            <th>类型</th>
+                            <th>客户订单号</th>
+                            <th>生产单号</th>
+                            <th>交货日期</th>
+                            <th>创建时间</th>
+                            <th>当前状态</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+                <!--<a name="status_mp">&nbsp;</a>-->
+            </div>
+            </div>
+
+            <h4>订单状态</h4>
+            <div class="table-responsive">
+                <table id="orderStatus" class="table table-striped table-bordered table-hover table-condensed">
+                    <thead>
+                        <tr>
+                            <th>序号</th>
+                            <th>生产单号</th>
+                            <th>订单描述</th>
+                            <th>创建时间</th>
+                            <th>操作者</th>
+                            <th>车间</th>
+                            <th>状态码</th>
+                            <th>操作状态</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
+            <h4>订单信息</h4>
+            <div class="table-responsive">
+                <table id="orderInfo" class="table table-striped table-bordered table-hover table-condensed">
+                    <thead>
+                        <tr>
+                            <th>&nbsp;</th>
+                            <th>Sph</th>
+                            <th>Cyl</th>
+                            <th>Axis</th>
+                            <th>Add</th>
+                            <th>Prs1</th>
+                            <th>Base1</th>
+                            <th>Prs2</th>
+                            <th>Base2</th>
+                            <th>Cent.th.</th>
+                            <th>Edge.th.</th>
+                            <th>Basec</th>
+                            <th>PD</th>
+                            <th>Height</th>
+                            <th>DBL</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>R</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                            <td rowspan="2">&nbsp;</td>
+                        </tr>
+                        <tr>
+                            <td>L</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                        </tr>
+                        <tr>
+                            <td>R</td>
+                            <td colspan="6">&nbsp;</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                        </tr>
+                        <tr>
+                            <td>L</td>
+                            <td colspan="6">&nbsp;</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                            <td>&nbsp;</td>
+                        </tr>
+                        <tr>
+                            <td>Remark</td>
+                            <td colspan="14">&nbsp;</td>
+
+                        </tr>
+
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-1"></div>
+    <div class="col-md-10">
+
+    </div>
+</div>
+
+</body>
+<script type="text/javascript" src="../js/jquery-3.3.1.min.js"></script>
+<script type="text/javascript" src="../js/bootstrap.min.js"></script>
+<script type="text/javascript" src="js/b.page.js"></script>
+<script type="text/javascript" src="js/flatpickr.min.js"></script>
+<script type="text/javascript" src="js/flatpickr.l10n.zh.js"></script>
+<script type="text/javascript" src="js/statusview.js"></script>
+</html>
