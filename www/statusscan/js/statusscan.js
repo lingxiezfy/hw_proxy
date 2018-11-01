@@ -120,7 +120,7 @@ function somebodyPanel(panel_id) {
         oPanel.reBtn.removeAttr("disabled");
         oPanel.conn_status.val(-1);
         oPanel.heartCheck.clear();
-        // console.clear();
+        console.clear();
     };
     oPanel.heartCheck = {
         timeout: 60000,
