@@ -8,10 +8,17 @@ body{
     font-size: 1.5vw;
 }
 .mate_win_body{
-    height: 36vh;
     font-size: 1.1vw;
 }
-@media (min-width: 1250px) {
+.mate_panel{
+    position: relative;
+    min-height: 1px;
+    padding-right: 15px;
+    padding-left: 15px;
+    float: left;
+    width: 100%;
+}
+@media (min-width: 1261px) {
     .panel-title {
         font-size: 21px;
     }
@@ -19,12 +26,15 @@ body{
         font-size: 17px;
     }
 }
+@media  {
+
+}
 .body_overflow{
     overflow-y: auto;
 }
 .height_nav{
     height: 55px;
 }
-.height_container{
-    min-height:100vh;
-}
+/*.height_container{*/
+    /*min-height:100vh;*/
+/*}*/
