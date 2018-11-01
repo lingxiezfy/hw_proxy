@@ -8,6 +8,10 @@
 import pymysql
 from twisted.web.resource import Resource
 import datetime
+import os
+import configparser
+
+
 class SqlService():
     def __init__(self, util, host, port, user, pwd, db):
         self.util = util
@@ -56,11 +60,16 @@ class order_list_resource(Resource):
         self.render_POST(request)
 
     def render_POST(self, request):
-        host = '192.168.1.240'
-        port = 3306
-        user = 'lensware'
-        pwd = 'lensware'
-        database = 'lwr_ginoptic'
+        real_path = os.path.split(os.path.realpath(__file__))[0]
+        config = configparser.ConfigParser(delimiters='=')
+        config.read(real_path + "/config.conf", encoding="utf-8")
+
+        host = config["LensWare"]['host']
+        port = int(config["LensWare"]['port'])
+        user = config["LensWare"]['user']
+        pwd = config["LensWare"]['pwd']
+        database = config["LensWare"]['database']
+
         try:
             pageSize = int(request.args[b'pageSize'][0].decode("utf-8"))
             pageNumber = int(request.args[b'pageNumber'][0].decode("utf-8"))

@@ -9,6 +9,9 @@ import psycopg2
 from twisted.web.resource import Resource
 import json
 import datetime
+import os
+import configparser
+
 
 class SqlService():
     def __init__(self, util, host, port, user, pwd, db):
@@ -74,11 +77,15 @@ class order_list_resource(Resource):
 
     def render_POST(self, request):
 
-        host = '106.14.239.39'
-        port = 5432
-        user = 'odoo'
-        pwd = 'trioo258'
-        database = 'gno'
+        real_path = os.path.split(os.path.realpath(__file__))[0]
+        config = configparser.ConfigParser(delimiters='=')
+        config.read(real_path + "/config.conf", encoding="utf-8")
+
+        host = config["Odoo"]['host']
+        port = int(config["Odoo"]['port'])
+        user = config["Odoo"]['user']
+        pwd = config["Odoo"]['pwd']
+        database = config["Odoo"]['database']
         try:
             job_num = request.args[b'job_num'][0].decode("utf-8")
         except:
