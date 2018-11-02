@@ -90,34 +90,51 @@ class ProxyServerFactory(ServerFactory):
             input_path = peer_ip+"&"+input_source+"&"+pre_key
 
             if self.config.has_option("Route", input_path):
-                o = self.config["Route"][input_path]
+                o_s = self.config["Route"][input_path].split('/')
                 # 更新已被使用的配置
                 # 已经为该路径配置路由，从预选列表中删除
                 if self.config.has_option("input_path", input_path):
                     self.config.remove_option("input_path", input_path)
                     with open(real_path + "/config.conf", 'w', encoding="utf-8") as configfile:
                         self.config.write(configfile)
-                if o in self.output_panel:
-                    # 记录该输入路径
-                    if input_path not in self.output_panel[o]:
-                        self.output_panel[o].append(input_path)
-                    # 向配置的面板发送消息
+                if self.check_for_deal(input_path, input_keys):
                     msg = self.deal_data(input_path, key_data)
-                    logger.info(" %s-收到条码-%s-%s" % (input_path, input_keys, msg))
-                    self.send_msg_to(o, msg)
+                    logger.info(" %s-%s-已处理-%s" % (input_path, input_keys, msg))
                 else:
-                    logger.warning(" panel: -%s- 未使用 : %s" % (o, input_keys))
+                    msg = ""
+                    logger.warning(" %s-%s-未处理" % (input_path, input_keys))
+                if msg:
+                    for o in o_s:
+                        if o in self.output_panel:
+                            # 记录该输入路径
+                            if input_path not in self.output_panel[o]:
+                                self.output_panel[o].append(input_path)
+                            # 向配置的面板发送消息
+                            self.send_msg_to(o, msg)
+                            logger.info(" 已发送消息 - panel: %s-%s" % (o, msg))
+                        else:
+                            logger.warning(" 未使用 - panel: %s " % o)
             elif self.config.has_option("input_path", input_path):
-                logger.warning(" %s- 未设置结果展示的panel " % input_path)
+                logger.warning(" %s - 未设置结果展示的panel " % input_path)
             else:
                 logger.info(" %s - 新输入路径 : %s" % (input_path, input_keys))
                 self.config["input_path"][input_path] = "#"
-
                 with open(real_path + "/config.conf", 'w', encoding="utf-8") as configfile:
                     self.config.write(configfile)
         except Exception as e:
-            print(e.__repr__())
-            pass
+            logger.error(" 数据接收时发生异常 - data_receive : %s" % e.__repr__())
+
+    def check_for_deal(self, _path, _keys):
+        if self.config.getboolean("proxyServer", "force_deal"):
+            logger.warning(" %s-收到条码- %s - 强制处理 - force_deal:True" % (_path, _keys))
+            return True
+        else:
+            output_s = self.config["Route"][_path].split('/')
+            for o in output_s:
+                if o in self.output_panel:
+                    return True
+            logger.warning(" %s-收到条码-%s- 无可用panel" % (_path, _keys))
+            return False
 
     def send_msg_to(self, target, msg):
         self.send_result(target+"&"+msg)
@@ -416,11 +433,9 @@ class ProxyServerFactory(ServerFactory):
     def set_result_protocol(self, p):
         self.deferred[0] = self._init_set_deferred()
         self.result_protocol = p
-        # print("Set result protocol Success：%s" % self.result_protocol)
 
     def set_result_failed(self, err):
         self.deferred[0] = self._init_set_deferred()
-        # print("Set result protocol failure：%s" % err)
 
     def on_result_protocol_lost(self, err):
         self.deferred[1] = self._init_lost_deferred()
@@ -466,7 +481,6 @@ class ResultClientFactory(ReconnectingClientFactory):
         self.p = ResultClientProtocol()
         self.p.factory = self
         self.resetDelay()
-        # print("Making result protocol ...")
         return self.p
 
     def data_receive(self, data):
@@ -474,7 +488,7 @@ class ResultClientFactory(ReconnectingClientFactory):
 
     def connect_success(self, p):
         self.deferred[0].callback(p)
-        logger.info("连接Result Server成功，正在配置传输协议")
+        logger.info("连接Result Server成功")
 
     def clientConnectionFailed(self, connector, reason):
         logger.error("连接Result Server失败, 等待重连...")
