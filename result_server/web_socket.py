@@ -181,19 +181,9 @@ class WebSocketFramer(object):
 class WebSocketFactory(protocol.ServerFactory):
     protocol = WebSocketProtocol
     clients = {}
-    every_client_limit = 4
 
-    def __init__(self, deferreds, every_client_limit):
+    def __init__(self, deferreds):
         self.deferreds = deferreds
-        self.every_client_limit = every_client_limit
-
-    def buildProtocol(self, addr):
-        if len(self.clients.get(addr.host, [])) < self.every_client_limit:
-            p = self.protocol()
-            p.factory = self
-            return p
-        else:
-            return None
 
     def data_receive(self, client, data):
         result = (client, data, "ws")
