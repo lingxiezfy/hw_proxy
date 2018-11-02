@@ -56,10 +56,8 @@ class ResultFactory(ServerFactory):
     def startFactory(self):
         # 注册一个 websocket 方式的结果反馈服务
         try:
-
             ws_port = self.config["WebSocket"]["ws_port"]
-            panel_limit = int(self.config["WebSocket"]["panelLimit"])
-            factory = WebSocketFactory(self.deferreds, panel_limit)
+            factory = WebSocketFactory(self.deferreds)
             endpoints.serverFromString(reactor, "tcp:"+ws_port).listen(factory)
             self.factorys["ws"] = factory
             logger.info("Register WebSocket Result at port %s " % ws_port)
@@ -96,44 +94,61 @@ class ResultFactory(ServerFactory):
 
     # 注册窗口
     def register_panel_to_proxy(self, result_panel):
-        # logger.error("register panel - %s " % result_panel)
         reactor.callLater(0.01, self.proxy_conn.send_data, "r&"+result_panel)
 
     # 注销窗口
     def unregister_panel_to_proxy(self, result_panel):
-        # logger.error("Unregister panel - %s " % result_panel)
         reactor.callLater(0.01, self.proxy_conn.send_data, "ur&"+result_panel)
 
     # callback for client request register a panel
     def result_receive_from(self, client_result):
         self.deferreds[0] = self._init_result_deferred()
         client_panel = client_result[2] + "&" + client_result[0].getPeer().host + ";" + client_result[1]
-        if self.is_panel_name(client_result[1]) and self.proxy_conn:
-            # 更新窗口与socket的配对信息
-            self.mate_client[client_panel] = client_result[0]
-            self.mate_result_panel[client_result[0]] = client_panel
-            # 向代理服务 注册窗口
-            self.register_panel_to_proxy(client_panel)
+        c_t_f = self.factorys[client_result[2]]
+        if self.proxy_conn:
+            if self.is_panel_name(client_result[1]):
+                if client_panel in self.mate_client:
+                    # 重复的页面命名连接
+                    # 断开旧连接，重新配对,并终止旧连接行为
+                    self.result_send_to(client_result[2], self.mate_client[client_panel],
+                                        "stop:已打开新页面，本页面终止服务，请关闭本页面")
+                    logger.warning("panel is already register: %s " % client_panel)
+                    c_t_f.stop_connect(self.mate_client[client_panel])
+                else:
+                    logger.info("new panel connect : %s " % client_panel)
+                # 更新窗口与socket的配对信息
+                self.mate_client[client_panel] = client_result[0]
+                self.mate_result_panel[client_result[0]] = client_panel
+                # 向代理服务 注册窗口
+                self.register_panel_to_proxy(client_panel)
+                return None
+            else:
+                self.result_send_to(client_result[2], client_result[0], "stop:无效的窗体命名-"+client_result[1]+"-请检查后刷新")
+                logger.error("register panel error, error panel name - %s " % client_panel)
+                c_t_f.stop_connect(client_result[0])
         else:
             self.result_send_to(client_result[2], client_result[0], "error:代理服务器未连接")
-            c_t_f = self.factorys[client_result[2]]
-            c_t_f.stop_connect(client_result[0])
             logger.error("register panel error, proxy not found - %s " % client_panel)
-            return None
+            c_t_f.stop_connect(client_result[0])
 
     # callback for Client connect
     def result_client_connect(self, client_info):
         self.deferreds[1] = self._init_connect_deferred()
-        # logger.info("Result client connected : %s " % client_info)
 
     # callback for Result Client lost
     def result_client_lost(self, client_info):
         self.deferreds[2] = self._init_lost_deferred()
         if self.proxy_conn:
-            self.unregister_panel_to_proxy(self.mate_result_panel[client_info[0]])
-            del self.mate_client[self.mate_result_panel[client_info[0]]]
-            del self.mate_result_panel[client_info[0]]
-        # logger.info("Result client lost: %s " % client_info)
+            try:
+                if self.mate_client[self.mate_result_panel[client_info[0]]] is client_info[0]:
+                    self.unregister_panel_to_proxy(self.mate_result_panel[client_info[0]])
+                    del self.mate_client[self.mate_result_panel[client_info[0]]]
+                    logger.info("close panel connection - %s " % self.mate_result_panel[client_info[0]])
+                else:
+                    logger.info("close older panel connection - %s " % self.mate_result_panel[client_info[0]])
+                del self.mate_result_panel[client_info[0]]
+            except Exception as e:
+                logger.error("close panel connection error - %s " % e.__repr__())
 
     # result can't encode,it should be a str,not bytes
     def result_boadcast_local(self, conn_type, clients, result):
