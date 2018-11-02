@@ -138,7 +138,8 @@ while True:
             scan_util.remove_file(dev.path)
             logger.info("输入设备已拔出 - %s " % dev.path)
         except Exception as e:
-            logger.error("发生错误-请重启后再试- %s " % e.__repr__())
+            pass
+            # logger.error("发生错误-请重启后再试- %s " % e.__repr__())
     # 发送数据
     if w:
         queue_len = len(data_queues)
@@ -160,6 +161,7 @@ while True:
         proxy_is_connected = False
     except:
         pass
+    get_drivers()
     # 重连服务器
     if not proxy_is_connected:
         try:
