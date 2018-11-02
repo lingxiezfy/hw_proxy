@@ -88,6 +88,8 @@ class ResultFactory(ServerFactory):
     def proxy_lost(self):
         logger.error("Proxy server lost ")
         self.proxy_conn = None
+        self.mate_client = {}
+        self.mate_result_panel = {}
         for key in self.factorys:
             self.result_boadcast(key, "error:丢失代理服务器连接")
             self.factorys[key].stop_all_connect()
