@@ -132,8 +132,9 @@ class ProxyServerFactory(ServerFactory):
             output_s = self.config["Route"][_path].split('/')
             for o in output_s:
                 if o in self.output_panel:
+                    logger.warning(" %s-收到条码-%s-禁止强制-force_deal:False- 发现可用的panel" % (_path, _keys))
                     return True
-            logger.warning(" %s-收到条码-%s- 无可用panel" % (_path, _keys))
+            logger.warning(" %s-收到条码-%s-禁止强制-force_deal:False- 无可用panel" % (_path, _keys))
             return False
 
     def send_msg_to(self, target, msg):
