@@ -12,6 +12,7 @@ import configparser
 import os
 import logging
 from logging.handlers import TimedRotatingFileHandler
+import traceback
 
 config = configparser.ConfigParser(delimiters='=')
 config.read(os.path.split(os.path.realpath(__file__))[0] + "/config.conf", encoding="utf-8")
@@ -90,7 +91,7 @@ while True:
             for result in dev.read():
                 if isinstance(result, evdev.InputEvent):
                     if result.type == evdev.ecodes.EV_KEY and result.value == 0x01:
-                        # print(str(evdev.ecodes.KEY[result.code])[4:])
+                        # print(str(result.code)+" "+str(evdev.ecodes.KEY[result.code]))
                         # 初始化记录键值缓存
                         if dev.path not in key_recode:
                             key_recode[dev.path] = ""
@@ -117,8 +118,11 @@ while True:
                                 # 置空键值缓存
                                 key_recode[dev.path] = ""
                         else:
-                            # 记录键值
-                            key_recode[dev.path] += scan_util.get_hid_print_key(function_key[dev.path], result.code)
+                            if result.code == 74:
+                                key_recode[dev.path] += '-'
+                                # 记录键值
+                            else:
+                                key_recode[dev.path] += scan_util.get_hid_print_key(function_key[dev.path], result.code)
                             # 清除脏数据
                             if len(key_recode[dev.path]) == max_data_length:
                                 logger.info("清除数据 - %s - %s" % (dev.path[19:], key_recode[dev.path]))
@@ -138,8 +142,8 @@ while True:
             scan_util.remove_file(dev.path)
             logger.info("输入设备已拔出 - %s " % dev.path)
         except Exception as e:
-            pass
-            # logger.error("发生错误-请重启后再试- %s " % e.__repr__())
+            print(traceback.print_exc())
+            logger.error("发生错误-请重启后再试- %s " % e.__repr__())
     # 发送数据
     if w:
         queue_len = len(data_queues)
