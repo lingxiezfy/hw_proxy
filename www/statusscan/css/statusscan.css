@@ -35,6 +35,9 @@ body{
 .height_nav{
     height: 55px;
 }
+.rc_btn{
+    display: none;
+}
 /*.height_container{*/
     /*min-height:100vh;*/
 /*}*/
