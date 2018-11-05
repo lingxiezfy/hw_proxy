@@ -70,9 +70,9 @@ function built_panel(index) {
         '                    <input class="rc_flag" type="hidden" value="1"/>\n' +
         '                    <div class="panel-heading">\n' +
         '                        <h3 class="panel-title">\n' +
-        '                            <span class="login">未登录()</span>&nbsp;-&nbsp;\n' +
-        '                            完成数量:<span class="num">0</span>&nbsp;-&nbsp;\n' +
-        '                            【<span class="state">未扫状态条码</span>】\n' +
+        '                            <span class="login">未登录()</span>&nbsp;-\n' +
+        '                            总数:<span class="num">0</span>&nbsp;-\n' +
+        '                            <span class="state">未扫状态条码</span>\n' +
         '                            <button class="btn btn-success btn-xs rc_btn">重新连接</button>\n' +
         '                        </h3>\n' +
         '                    </div>\n' +
