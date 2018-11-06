@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+    <title>外协收料</title>
+    <link rel="icon" href="icon/outpick.ico">
+    <!-- 引入bootstrap3 -->
+    <link href="../css/bootstrap.min.css" rel="stylesheet"/>
+    <link rel="stylesheet" href="css/outpick.css" type="text/css"/>
+</head>
+<body>
+<nav class="navbar navbar-inverse navbar-fixed-top">
+    <div class="container-fluid">
+        <div class="navbar-header">
+            <span class="navbar-brand header_title">外协收料</span>
+        </div>
+        <div id="navbar" class="navbar-collapse collapse">
+            <ul class="nav navbar-nav navbar-right">
+                <li><a href="../">返回主页</a></li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-sm-3 col-md-2 sidebar">
+            <form id="scan_form">
+                <div class="form-group">
+                    <label class="num_name">生产单号</label>
+                    <input id="job_num" name="job_num" type="text" class="form-control" aria-label="...">
+                </div>
+                <div>
+                    <button class="btn btn-default" id="op_btn" onclick="do_out_sourcing_pick()">操作</button>
+                    <button class="btn btn-default msg_red ele_hidden" id="clear_btn" onclick="clear_panel()">清零
+                    </button>
+                </div>
+            </form>
+            <hr style="border: grey solid 0.5px"/>
+            <div id="user_info">
+                <label>用户信息&nbsp;&nbsp;&nbsp;</label>
+                <button class="btn btn-info btn-xs login_btn" data-toggle="modal" data-target="#loginModal">点击登陆
+                </button>
+                <h4 class="msg_red name">未登录</h4>
+                <input class="status" type="hidden" value="0"/>
+                <input class="uid" type="hidden" value="-1"/>
+                <input class="pwd" type="hidden" value="-1"/>
+                <button class="btn btn-info btn-xs logout_btn ele_hidden" onclick="user_logout()">退出登陆</button>
+            </div>
+
+
+        </div>
+        <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
+            <div id="view_panel" class="view_panel" style="width: 100%;">
+                <div class="panel panel-primary">
+                    <div class="panel-heading">
+                        <h3 class="panel-title">
+                            <label class="header_title">外协收料</label>
+                            <span id="success_num" class="ele_hidden"> &nbsp;&nbsp;&nbsp;完成数：<label >0</label></span>
+
+                        </h3>
+                    </div>
+                    <div class="panel-body view_body">
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-1"></div>
+    <div class="col-md-10">
+
+    </div>
+</div>
+
+<div class="modal fade" id="loginModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span>
+                </button>
+                <h4 class="modal-title" id="exampleModalLabel">用户登录</h4>
+            </div>
+            <div class="modal-body">
+                <form>
+                    <div class="form-group">
+                        <label for="usr" class="control-label">用户名:</label>
+                        <input type="text" class="form-control" id="usr" name="usr"/>
+                    </div>
+                    <div class="form-group">
+                        <label for="pwd" class="control-label">密码:</label>
+                        <input type="password" class="form-control" id="pwd" name="pwd"/>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <div style="text-align: left;float:left"><label class="msg_red return_msg"></label></div>
+
+                <button type="button" class="btn btn-default" data-dismiss="modal">关闭</button>
+                <button type="button" class="btn btn-primary" onclick="user_login()">登录</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+<script type="text/javascript" src="../js/jquery-3.3.1.min.js"></script>
+<script type="text/javascript" src="../js/bootstrap.min.js"></script>
+<script type="text/javascript" src="js/outpick.js"></script>
+</html>
