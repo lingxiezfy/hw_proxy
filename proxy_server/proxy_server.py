@@ -207,7 +207,7 @@ class ProxyServerFactory(ServerFactory):
             sheet = wb[wb.sheetnames[0]]
             rows = sheet.iter_rows(min_row=2, max_col=2)
             for row in rows:
-                self.status_history[row[0].value] = row[1].value
+                self.status_history[row[0].value.upper()] = row[1].value
             logger.info("初始化状态列表")
             return True
         except Exception as e:
@@ -216,7 +216,7 @@ class ProxyServerFactory(ServerFactory):
         pass
 
     def check_status(self, _path, status):
-        if status in self.status_history:
+        if status.upper() in self.status_history:
             self.state_recode[_path] = (self.status_history[status], status)
             self.num_recode[_path] = 0
             logger.info("-%s-设置状态成功-%s:%s" % (_path, self.state_recode[_path][0], status))
