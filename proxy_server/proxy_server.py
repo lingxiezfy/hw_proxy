@@ -207,8 +207,10 @@ class ProxyServerFactory(ServerFactory):
             sheet = wb[wb.sheetnames[0]]
             rows = sheet.iter_rows(min_row=2, max_col=2)
             for row in rows:
-                self.status_history[row[0].value.upper()] = row[1].value
+                self.status_history[row[0].value.upper()] = row[1].value.replace('&', '').replace(':', '')
+            print(self.status_history)
             logger.info("初始化状态列表")
+            wb.close()
             return True
         except Exception as e:
             logger.info("初始化状态列表失败-%s" % e.__repr__())
