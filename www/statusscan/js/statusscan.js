@@ -96,10 +96,11 @@ function somebodyPanel(panel_id) {
     oPanel.reBtn.attr("onclick", "reConnect('" + oPanel.panel_id + "')");
     oPanel.keepalive = 1;
     oPanel.ws = new WebSocket("ws://" + host + ":" + port + "");
+    cls(oPanel.panel_id);
     add_msg(oPanel.panel_id, "正在连接 - host: " + host + " - port: " + port);
     oPanel.ws.onopen = function (msg) {
         oPanel.ws.send("" + panel_id + "");
-        add_msg(oPanel.panel_id, "连接成功");
+        add_msg(oPanel.panel_id, "连接成功 - 请登录");
         oPanel.panel.removeClass("panel-danger");
         oPanel.panel.addClass("panel-primary");
         oPanel.reBtn.attr("disabled", "disabled");
@@ -125,6 +126,9 @@ function somebodyPanel(panel_id) {
         oPanel.panel.removeClass("panel-primary");
         oPanel.panel.addClass("panel-danger");
         oPanel.reBtn.removeAttr("disabled");
+        setLogin(oPanel.panel_id,'未登录()');
+        setState(oPanel.panel_id,'未扫状态条码');
+        setNum(oPanel.panel_id,'0');
         oPanel.conn_status.val(-1);
         oPanel.heartCheck.clear();
         console.clear();
@@ -171,13 +175,13 @@ function deal_one_msg(panel_id, msg) {
     var op = msg.toString().substring(0, first_sp);
     var less_msg = msg.toString().substring(first_sp + 1);
     if (op == "login") {
-        $('#' + panel_id + ' .panel-title .login').text(less_msg.split(':')[0] + "(" + less_msg.split(':')[1] + ")")
+        setLogin(panel_id,less_msg.split(':')[0] + "(" + less_msg.split(':')[1] + ")")
     } else if (op == "state") {
-        $('#' + panel_id + ' .panel-title .state').text(less_msg)
+        setState(panel_id,less_msg)
     } else if (op == "num") {
-        $('#' + panel_id + ' .panel-title .num').text(less_msg + "")
+        setNum(panel_id,less_msg + "")
     } else if (op == "cls") {
-        $('#' + panel_id + ' .panel-body').children("div").remove()
+        cls(panel_id)
     } else if (op == "msg") {
         add_msg(panel_id, less_msg)
     } else if (op == "error") {
@@ -191,7 +195,18 @@ function deal_one_msg(panel_id, msg) {
         add_error(panel_id, msg)
     }
 }
-
+function setLogin(panel_id,login) {
+    $('#' + panel_id + ' .panel-title .login').text(login);
+}
+function setState(panel_id,state) {
+    $('#' + panel_id + ' .panel-title .state').text(state)
+}
+function setNum(panel_id,num) {
+    $('#' + panel_id + ' .panel-title .num').text(num + "")
+}
+function cls(panel_id) {
+    $('#' + panel_id + ' .panel-body').children("div").remove()
+}
 function add_info(panel_id, info) {
     var panel_length = $('#' + panel_id + ' .panel-body').children("div").length;
     if (panel_length >= msg_max_count) {
@@ -225,7 +240,7 @@ function reConnect(panel_id) {
             add_error(panel_id, "已有正在尝试的连接，请等待...");
         }
     }else {
-        add_error(panel_id, "已有终止本窗口服务，请关闭本页面");
+        add_error(panel_id, "已终止本窗口服务，请关闭本页面");
     }
 }
 
