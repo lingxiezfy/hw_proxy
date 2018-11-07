@@ -91,17 +91,17 @@ while True:
             for result in dev.read():
                 if isinstance(result, evdev.InputEvent):
                     if result.type == evdev.ecodes.EV_KEY and result.value == 0x01:
-                        # print(str(result.code)+" "+str(evdev.ecodes.KEY[result.code]))
+                        # logger.info(str(result.code)+" "+str(evdev.ecodes.KEY[result.code]))
                         # 初始化记录键值缓存
                         if dev.path not in key_recode:
                             key_recode[dev.path] = ""
                         # 初始化功能键缓存
                         if dev.path not in function_key:
                             function_key[dev.path] = False
-                        # 分析键值（功能键，回车键，或普通键）
+                        # 分析键值（shift功能键，回车键，或普通键）
                         if result.code == 42 or result.code == 54:
                             function_key[dev.path] = True
-                        elif result.code == 28:
+                        elif result.code == 28 or result.code == 96:
                             key_str = key_recode[dev.path]
                             if key_str:
                                 logger.info("打包数据 - %s - %s" % (dev.path[19:], key_str))
@@ -118,13 +118,13 @@ while True:
                                 # 置空键值缓存
                                 key_recode[dev.path] = ""
                         else:
-                            if result.code == 74:
-                                key_recode[dev.path] += '-'
-                                # 记录键值
-                            else:
-                                key_recode[dev.path] += scan_util.get_hid_print_key(function_key[dev.path], result.code)
+                            k = scan_util.get_hid_print_key(function_key[dev.path], result.code,
+                                                            str(evdev.ecodes.KEY[result.code]))
+                            # 记录键值
+                            if k:
+                                key_recode[dev.path] += k
                             # 清除脏数据
-                            if len(key_recode[dev.path]) == max_data_length:
+                            if len(key_recode[dev.path]) == max_data_length+1:
                                 logger.info("清除数据 - %s - %s" % (dev.path[19:], key_recode[dev.path]))
                                 key_recode[dev.path] = ""
                             # 重置功能键
