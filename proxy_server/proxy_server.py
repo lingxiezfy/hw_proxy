@@ -86,6 +86,14 @@ class ProxyServerFactory(ServerFactory):
             else:
                 pre_key = "000"
                 key_data = input_keys
+            if self.config.getboolean('data_prefix', 'isdigit'):
+                if not pre_key.isdigit():
+                    raise ValueError('前缀配置为数字，当前前缀：%s, 未处理，丢弃数据 : %s' % (pre_key, input_keys))
+            pre_length = self.config.getint('data_prefix', 'prefix_length')
+            if len(pre_key) > pre_length:
+                raise ValueError('前缀配置长度为%s，当前前缀：%s 超出范围, 未处理，丢弃数据 : %s' % (pre_length, pre_key, input_keys))
+            elif len(pre_key) < pre_length:
+                pre_key = pre_key.zfill(pre_length)
 
             input_path = peer_ip+"&"+input_source+"&"+pre_key
 
@@ -132,7 +140,7 @@ class ProxyServerFactory(ServerFactory):
             output_s = self.config["Route"][_path].split('/')
             for o in output_s:
                 if o in self.output_panel:
-                    logger.warning(" %s-收到条码-%s-禁止强制-force_deal:False- 发现可用的panel" % (_path, _keys))
+                    logger.info(" %s-收到条码-%s-禁止强制-force_deal:False- 发现可用的panel" % (_path, _keys))
                     return True
             logger.warning(" %s-收到条码-%s-禁止强制-force_deal:False- 无可用panel" % (_path, _keys))
             return False
@@ -207,8 +215,7 @@ class ProxyServerFactory(ServerFactory):
             sheet = wb[wb.sheetnames[0]]
             rows = sheet.iter_rows(min_row=2, max_col=2)
             for row in rows:
-                self.status_history[row[0].value.upper()] = row[1].value.replace('&', '').replace(':', '')
-            print(self.status_history)
+                self.status_history[row[0].value.replace(' ', '').upper()] = row[1].value.strip(' ').replace('&', '').replace(':', '')
             logger.info("初始化状态列表")
             wb.close()
             return True
@@ -218,29 +225,13 @@ class ProxyServerFactory(ServerFactory):
         pass
 
     def check_status(self, _path, status):
-        if status.upper() in self.status_history:
+        status = status.upper()
+        if status in self.status_history:
             self.state_recode[_path] = (self.status_history[status], status)
             self.num_recode[_path] = 0
             logger.info("-%s-设置状态成功-%s:%s" % (_path, self.state_recode[_path][0], status))
             return True
         return False
-        # try:
-        #     wb = openpyxl.load_workbook(real_path + "/status.xlsx", read_only=True)
-        #     sheet = wb[wb.sheetnames[0]]
-        #     rows = sheet.iter_rows(min_row=len(self.status_history)+1, max_col=2)
-        #     for row in rows:
-        #         self.status_history[row[0].value] = row[1].value
-        #         for c in row:
-        #             if status == c.value:
-        #                 self.state_recode[_path] = (sheet.cell(row=c.row, column=2).value, c.value)
-        #                 self.num_recode[_path] = 0
-        #                 logger.info("-%s-设置状态成功-%s:%s" % (_path, self.state_recode[_path][0], status))
-        #                 wb.close()
-        #                 return True
-        #     wb.close()
-        #     return False
-        # except Exception as e:
-        #     return False
 
     # 判断是否为状态条码
     def is_state_value(self, _path, value):
