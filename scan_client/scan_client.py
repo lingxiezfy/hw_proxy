@@ -142,7 +142,7 @@ while True:
             scan_util.remove_file(dev.path)
             logger.info("输入设备已拔出 - %s " % dev.path)
         except Exception as e:
-            print(traceback.print_exc())
+            # print(traceback.print_exc())
             logger.error("发生错误-请重启后再试- %s " % e.__repr__())
     # 发送数据
     if w:

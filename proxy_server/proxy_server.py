@@ -340,7 +340,7 @@ class ProxyServerFactory(ServerFactory):
                     history_list.append(jobnum)
                 return self.build_status_msg(_path, jobnum, returnmsg)
         except Exception as e:
-            print(e.__repr__())
+            # print(e.__repr__())
             return self.build_status_msg(_path, jobnum, "777")
 
     def pickingbusinessforprint(self, _path, _data):

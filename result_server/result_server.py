@@ -62,7 +62,7 @@ class ResultFactory(ServerFactory):
             self.factorys["ws"] = factory
             logger.info("Register WebSocket Result at port %s " % ws_port)
         except Exception as e:
-            print("Register webSocket Result error %s " % e.__repr__())
+            logger.error("Register webSocket Result error %s " % e.__repr__())
             self.factorys["ws"] = None
 
         # 其他结果反馈服务也可在此注册，按要求实现回调即可
