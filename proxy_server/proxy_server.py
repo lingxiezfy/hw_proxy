@@ -106,7 +106,7 @@ class ProxyServerFactory(ServerFactory):
                     with open(real_path + "/config.conf", 'w', encoding="utf-8") as configfile:
                         self.config.write(configfile)
                 if self.check_for_deal(input_path, input_keys):
-                    msg = self.deal_data(input_path, key_data)
+                    msg = self.deal_data(input_path, key_data, input_type)
                     logger.info(" %s-%s-已处理-%s" % (input_path, input_keys, msg))
                 else:
                     msg = ""
@@ -247,6 +247,20 @@ class ProxyServerFactory(ServerFactory):
         else:
             return False
 
+    def is_picking_function(self, _path, fnc):
+        if fnc == '03':
+            self.state_recode[_path] = ('镜[片片片]出库', 'frame')
+            self.num_recode[_path] = 0
+            logger.info("-%s-设置镜片出库成功-%s:%s" % (_path, self.state_recode[_path][0], fnc))
+            return True
+        elif fnc == '04':
+            self.state_recode[_path] = ('镜[架架架]出库', 'lens')
+            self.num_recode[_path] = 0
+            logger.info("-%s-设置镜驾出库成功-%s:%s" % (_path, self.state_recode[_path][0], fnc))
+            return True
+        else:
+            return False
+
     # 返回值前缀说明：
     #     login:登录信息,数据格式为："login:用户名:工号"
     #     num:扫描总数,数据格式为："num:数量"
@@ -255,7 +269,7 @@ class ProxyServerFactory(ServerFactory):
     #     info:通知信息,数据格式为："info:通知信息"
     #     error: 错误信息,数据格式为："error:错误信息"
     #     msg:一般返回消息,数据格式为："msg:一般消息"
-    def deal_data(self, _path, _data):
+    def deal_data(self, _path, _data, data_type):
         login_value = self.login_recode.get(_path, None)
         if len(_data) <= 0:
             return "error:扫描有误"
@@ -266,7 +280,12 @@ class ProxyServerFactory(ServerFactory):
                    (self.login_recode[_path][0], self.login_recode[_path][1])
         elif self.is_state_value(_path, _data):
             if login_value:
-                return "state:%s&num:0&cls:1&info:设置状态成功" % self.state_recode[_path][0]
+                return "state:%s&num:0&cls:1&info:设置%s成功" % (self.state_recode[_path][0], self.state_recode[_path][0])
+            else:
+                return "error:未登录"
+        elif self.is_picking_function(_path, _data):
+            if login_value:
+                return "state:%s&num:0&cls:1&info:设置%s成功" % (self.state_recode[_path][0], self.state_recode[_path][0])
             else:
                 return "error:未登录"
         elif self.is_job_num(_data):
@@ -276,17 +295,27 @@ class ProxyServerFactory(ServerFactory):
             elif state_value is None:
                 return "error:未扫状态条码"
             else:
-                if self.config["Odoo"]["titleType"].split(';')[0] == '1':
+                if data_type == 'pic' and (state_value[1] in ['frame', 'lens']):
                     return self.pickingbusiness(_path, _data)
-                elif self.config["Odoo"]["titleType"].split(';')[0] == '2':
-                    return self.pickingbusinessforstatus(_path, _data)
                 else:
-                    return self.pickingbusinessforprint(_path, _data)
+                    return self.pickingbusinessforstatus(_path, _data)
         else:
             return "error:"+now_time() + "-" + _data + "-" + "条码未设置使用"
 
-    def pickingbusiness(self, _path, _data):
-        pass
+    def pickingbusiness(self, _path, jobnum):
+        try:
+            host = self.config.get("Odoo", "rpc_host")
+            port = self.config.get("Odoo", "rpc_port")
+            db = self.config.get("Odoo", "rpc_db")
+
+            uid = self.login_recode[_path][2]
+            password = self.login_recode[_path][3]
+            rpc = RPCProxy(uid, password, host=host, port=port, dbname=db)
+            returnmsg = rpc('mrp.production', 'rpc_action_picking_done', jobnum, self.state_recode[_path][1])
+            return self.build_picking_msg(_path, jobnum, returnmsg)
+        except Exception as e:
+            # print(e.__repr__())
+            return self.build_picking_msg(_path, jobnum, "777")
 
     # 上传扫描订单的状态，_path为扫描来源，jobnum为扫描的生产单号
     def pickingbusinessforstatus(self, _path, jobnum):
@@ -379,6 +408,43 @@ class ProxyServerFactory(ServerFactory):
 
             return "login:%s:%s&state:%s&num:%d&msg:%s" % \
                    (login_value[0], login_value[1], state_value[0], self.num_recode[_path], msg)
+
+    def build_picking_msg(self, _path, jobnum, returnmsg):
+        login_value = self.login_recode[_path]
+        state_value = self.state_recode[_path]
+        if returnmsg != '100':
+
+            if returnmsg == "501":
+                returnmsg = "镜片已出库"
+            if returnmsg == "502":
+                returnmsg = "镜架已出库"
+            elif returnmsg == "503":
+                returnmsg = "无库存"
+            elif returnmsg == "504":
+                returnmsg = "保留异常"
+            elif returnmsg == "505":
+                returnmsg = "出库动作异常"
+            elif returnmsg == "506":
+                returnmsg = "出库单不存在"
+            elif returnmsg == "507":
+                returnmsg = "生产单不存在"
+            elif returnmsg == "508":
+                returnmsg = "不需要出库"
+            else:
+                returnmsg = "出库失败-异常"
+
+            msg = now_time() + "-" + jobnum + "-" + self.state_recode[_path][0] + "-" + returnmsg
+            return "login:%s:%s&state:%s&num:%d&error:%s" % \
+                   (login_value[0], login_value[1], state_value[0], self.num_recode[_path], msg)
+
+        else:
+            returnmsg = "出库成功"
+            self.num_recode[_path] += 1
+            msg = now_time() + "-" + jobnum + "-" + self.state_recode[_path][0] + "-" + returnmsg
+
+            return "login:%s:%s&state:%s&num:%d&msg:%s" % \
+                   (login_value[0], login_value[1], state_value[0], self.num_recode[_path], msg)
+
 
     # 接收结果显示服务器消息的回调，结果显示服务器向代理服务注册其控制的展示面板
     # 注册格式为："r&面板类型&面板唯一路径"

@@ -106,7 +106,11 @@ while True:
                             if key_str:
                                 logger.info("打包数据 - %s - %s" % (dev.path[19:], key_str))
                                 # 打包需要发送的数据包
-                                packet = struct.pack("3s60s20s", "kbd".encode("utf-8"),
+                                if config.has_option('scanClient', 'type'):
+                                    data_type = config['scanClient']['type']
+                                else:
+                                    data_type = 'kbd'
+                                packet = struct.pack("3s60s20s", data_type.encode("utf-8"),
                                                      dev.path[19:].encode("utf-8"),
                                                      key_str.encode("utf-8"))
                                 packet += "\r\n".encode("utf-8")
