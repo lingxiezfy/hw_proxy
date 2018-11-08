@@ -283,7 +283,7 @@ class ProxyServerFactory(ServerFactory):
                 return "state:%s&num:0&cls:1&info:设置%s成功" % (self.state_recode[_path][0], self.state_recode[_path][0])
             else:
                 return "error:未登录"
-        elif self.is_picking_function(_path, _data):
+        elif data_type == 'pic' and self.is_picking_function(_path, _data):
             if login_value:
                 return "state:%s&num:0&cls:1&info:设置%s成功" % (self.state_recode[_path][0], self.state_recode[_path][0])
             else:
