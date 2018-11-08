@@ -31,7 +31,7 @@ class Config(object):
         self.real_path = os.path.split(os.path.realpath(__file__))[0]
         self.config = configparser.ConfigParser(delimiters='=')
         self.config.read(self.real_path + "/config.conf", encoding="utf-8")
-        self.logger = logging.getLogger('Proxy')
+        self.logger = logging.getLogger('OutPick')
         self.logger.setLevel(logging.DEBUG)
         fn = self.real_path + '/log/log.log'
 
@@ -40,11 +40,12 @@ class Config(object):
         fh.setLevel(logging.DEBUG)
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         fh.setFormatter(formatter)
+
         self.logger.addHandler(fh)
-        ch = logging.StreamHandler()
-        ch.setLevel(logging.DEBUG)
-        ch.setFormatter(formatter)
-        self.logger.addHandler(ch)
+        # ch = logging.StreamHandler()
+        # ch.setLevel(logging.DEBUG)
+        # ch.setFormatter(formatter)
+        # self.logger.addHandler(ch)
 
 
 registerAdapter(Config, Session, IConfig)

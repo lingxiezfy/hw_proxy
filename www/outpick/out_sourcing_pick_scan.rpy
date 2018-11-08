@@ -98,9 +98,33 @@ class OutSourcingPickScan(Resource):
                         mr_id = MoveRecords[0]['id']
                         strSucceed = rpc("stock.picking", "action_done_remote", mr_id)
                         if strSucceed == "success!":
-                            msg = job_num + " 来料接收:操作成功"
-                            msg_type = 'info'
+                            msg = job_num + " 来料接收:操作成功 - 执行出库:"
+
                             config.logger.info(" %s" % msg)
+                            returnmsg = rpc('mrp.production', 'rpc_action_picking_done', job_num, 'lens')
+                            if returnmsg != '100':
+                                if returnmsg == "501":
+                                    returnmsg = "镜片已出库"
+                                if returnmsg == "502":
+                                    returnmsg = "镜架已出库"
+                                elif returnmsg == "503":
+                                    returnmsg = "无库存"
+                                elif returnmsg == "504":
+                                    returnmsg = "保留异常"
+                                elif returnmsg == "505":
+                                    returnmsg = "出库动作异常"
+                                elif returnmsg == "506":
+                                    returnmsg = "出库单不存在"
+                                elif returnmsg == "507":
+                                    returnmsg = "生产单不存在"
+                                elif returnmsg == "508":
+                                    returnmsg = "不需要出库"
+                                msg += returnmsg+" - 请手动出库"
+                                msg_type = 'warning'
+                            else:
+                                returnmsg = "出库成功"
+                                msg += returnmsg
+                                msg_type = 'info'
                         else:
                             msg = job_num + " 来料接收:操作失败 : " + strSucceed
                             msg_type = 'error'

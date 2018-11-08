@@ -66,6 +66,8 @@ function do_out_sourcing_pick() {
                         if (do_sum) {
                             $('#success_num label').text(parseInt($('#success_num label').text()) + 1)
                         }
+                    }else if(data.msg_type == 'warning'){
+                        add_warning('view_panel', data.time + " - " + data.msg)
                     }
                 } else if (data.code == 2) {
                     add_error('view_panel', '未登录，请刷新后重新登录!');
@@ -98,6 +100,13 @@ function add_error(panel_id, error) {
     $('#' + panel_id + ' .panel-body').prepend("<div style='color: red'>" + error + " </div>");
 }
 
+function add_warning(panel_id, warning) {
+    var panel_length = $('#' + panel_id + ' .panel-body').children("div").length;
+    if (panel_length >= msg_max_count) {
+        $('#' + panel_id + ' .panel-body').children("div")[panel_length - 1].remove()
+    }
+    $('#' + panel_id + ' .panel-body').prepend("<div style='color: yellow'>" + warning + " </div>");
+}
 
 function clear_panel() {
     $('#job_num').val('');
