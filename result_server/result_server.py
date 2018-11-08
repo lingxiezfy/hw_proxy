@@ -30,7 +30,7 @@ class ResultProtocol(LineReceiver):
         self.sendLine(data.encode())
 
     def connectionLost(self, reason):
-        self.factory.proxy_lost()
+        self.factory.proxy_lost(self)
         self.transport.loseConnection()
 
 
@@ -42,7 +42,7 @@ class ResultFactory(ServerFactory):
     mate_client = {}
     mate_result_panel = {}
     deferreds = []
-    proxy_conn = None
+    proxy_conn = []
 
     def __init__(self):
         self.deferreds = [self._init_result_deferred(),
@@ -51,7 +51,7 @@ class ResultFactory(ServerFactory):
         # 目前实现的有webSocket方式
         self.factorys["ws"] = None
         self.config = config
-        self.proxy_conn = None
+        self.proxy_conn = []
 
     def startFactory(self):
         # 注册一个 websocket 方式的结果反馈服务
@@ -82,25 +82,31 @@ class ResultFactory(ServerFactory):
             logger.error("Result data error %s : %s " % (data, e.__repr__()))
 
     def proxy_connect(self, proxy_conn):
-        logger.info("Proxy server connected")
-        self.proxy_conn = proxy_conn
+        logger.info("Proxy server connected %s" % proxy_conn)
+        self.proxy_conn.append(proxy_conn)
+        panel_s = list(self.mate_client.keys())
+        for panel in panel_s:
+            reactor.callLater(0.01, proxy_conn.send_data, "r&" + panel)
 
-    def proxy_lost(self):
-        logger.error("Proxy server lost ")
-        self.proxy_conn = None
-        self.mate_client = {}
-        self.mate_result_panel = {}
-        for key in self.factorys:
-            self.result_boadcast(key, "error:丢失代理服务器连接")
-            self.factorys[key].stop_all_connect()
+    def proxy_lost(self, proxy_conn):
+        logger.error("Proxy server lost %s" % proxy_conn)
+        self.proxy_conn.remove(proxy_conn)
+        if not self.proxy_conn:
+            self.mate_client = {}
+            self.mate_result_panel = {}
+            for key in self.factorys:
+                self.result_boadcast(key, "error:丢失代理服务器连接")
+                self.factorys[key].stop_all_connect()
 
     # 注册窗口
     def register_panel_to_proxy(self, result_panel):
-        reactor.callLater(0.01, self.proxy_conn.send_data, "r&"+result_panel)
+        for proxy_conn in self.proxy_conn:
+            reactor.callLater(0.01, proxy_conn.send_data, "r&"+result_panel)
 
     # 注销窗口
     def unregister_panel_to_proxy(self, result_panel):
-        reactor.callLater(0.01, self.proxy_conn.send_data, "ur&"+result_panel)
+        for proxy_conn in self.proxy_conn:
+            reactor.callLater(0.01, proxy_conn.send_data, "ur&"+result_panel)
 
     # callback for client request register a panel
     def result_receive_from(self, client_result):
