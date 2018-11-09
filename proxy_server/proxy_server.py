@@ -249,14 +249,14 @@ class ProxyServerFactory(ServerFactory):
 
     def is_picking_function(self, _path, fnc):
         if fnc == '03':
-            self.state_recode[_path] = ('镜[片片片]出库', 'frame')
+            self.state_recode[_path] = ('镜 [架架架] 出库', 'frame')
             self.num_recode[_path] = 0
-            logger.info("-%s-设置镜片出库成功-%s:%s" % (_path, self.state_recode[_path][0], fnc))
+            logger.info("-%s-设置镜架出库成功-%s:%s" % (_path, self.state_recode[_path][0], fnc))
             return True
         elif fnc == '04':
-            self.state_recode[_path] = ('镜[架架架]出库', 'lens')
+            self.state_recode[_path] = ('镜 [片片片] 出库', 'lens')
             self.num_recode[_path] = 0
-            logger.info("-%s-设置镜驾出库成功-%s:%s" % (_path, self.state_recode[_path][0], fnc))
+            logger.info("-%s-设置镜片出库成功-%s:%s" % (_path, self.state_recode[_path][0], fnc))
             return True
         else:
             return False
@@ -314,7 +314,6 @@ class ProxyServerFactory(ServerFactory):
             returnmsg = rpc('mrp.production', 'rpc_action_picking_done', jobnum, self.state_recode[_path][1])
             return self.build_picking_msg(_path, jobnum, returnmsg)
         except Exception as e:
-            # print(e.__repr__())
             return self.build_picking_msg(_path, jobnum, "777")
 
     # 上传扫描订单的状态，_path为扫描来源，jobnum为扫描的生产单号
