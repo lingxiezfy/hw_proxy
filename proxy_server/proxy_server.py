@@ -11,7 +11,8 @@ from twisted.internet.protocol import ServerFactory, ReconnectingClientFactory
 
 
 from rpc_helper import ServerProxy, RPCProxy
-from sql_helper import MsSqlServer
+from sql_helper import MsSqlServer, SqlService
+import psycopg2
 
 import struct
 import configparser
@@ -249,14 +250,14 @@ class ProxyServerFactory(ServerFactory):
 
     def is_picking_function(self, _path, fnc):
         if fnc == '03':
-            self.state_recode[_path] = ('镜 [架架架] 出库', 'frame')
-            self.num_recode[_path] = 0
-            logger.info("-%s-设置镜架出库成功-%s:%s" % (_path, self.state_recode[_path][0], fnc))
-            return True
-        elif fnc == '04':
             self.state_recode[_path] = ('镜 [片片片] 出库', 'lens')
             self.num_recode[_path] = 0
             logger.info("-%s-设置镜片出库成功-%s:%s" % (_path, self.state_recode[_path][0], fnc))
+            return True
+        elif fnc == '04':
+            self.state_recode[_path] = ('镜 [架架架] 出库', 'frame')
+            self.num_recode[_path] = 0
+            logger.info("-%s-设置镜架出库成功-%s:%s" % (_path, self.state_recode[_path][0], fnc))
             return True
         else:
             return False
@@ -312,6 +313,22 @@ class ProxyServerFactory(ServerFactory):
             password = self.login_recode[_path][3]
             rpc = RPCProxy(uid, password, host=host, port=port, dbname=db)
             returnmsg = rpc('mrp.production', 'rpc_action_picking_done', jobnum, self.state_recode[_path][1])
+            # 记录出库历史
+            if returnmsg == '100':
+                try:
+                    db_host = self.config.get("OdooPgSql", "host")
+                    db_port = int(self.config.get("OdooPgSql", "port"))
+                    db_usr = self.config.get("OdooPgSql", "user")
+                    db_pwd = self.config.get("OdooPgSql", "pwd")
+                    db_db = self.config.get("OdooPgSql", "db")
+                    history_db = SqlService(util=psycopg2,host=db_host,port=db_port,user=db_usr,pwd=db_pwd,db=db_db)
+                    sql = "insert into picking_history(job_num,uid,picking_time,picking_type) values ('%s','%s','%s','%s')"\
+                          % (jobnum,uid,now_time(),self.state_recode[_path][1])
+                    history_db.ExecNonQuery(sql)
+                    history_db.CloseDB()
+                    logger.warning('保存出库历史成功 - %s' % jobnum)
+                except Exception as e:
+                    logger.warning('保存出库历史失败 - %s : %s' % (jobnum, e.__repr__()))
             return self.build_picking_msg(_path, jobnum, returnmsg)
         except Exception as e:
             return self.build_picking_msg(_path, jobnum, "777")
