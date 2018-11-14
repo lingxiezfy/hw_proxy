@@ -6,7 +6,7 @@
 # @Software: PyCharm
 
 from twisted.protocols.basic import LineReceiver
-from twisted.internet import defer, main
+from twisted.internet import defer, main, threads
 from twisted.internet.protocol import ServerFactory, ReconnectingClientFactory
 
 
@@ -99,7 +99,6 @@ class ProxyServerFactory(ServerFactory):
             input_path = peer_ip+"&"+input_source+"&"+pre_key
 
             if self.config.has_option("Route", input_path):
-                o_s = self.config["Route"][input_path].split('/')
                 # 更新已被使用的配置
                 # 已经为该路径配置路由，从预选列表中删除
                 if self.config.has_option("input_path", input_path):
@@ -107,22 +106,12 @@ class ProxyServerFactory(ServerFactory):
                     with open(real_path + "/config.conf", 'w', encoding="utf-8") as configfile:
                         self.config.write(configfile)
                 if self.check_for_deal(input_path, input_keys):
-                    msg = self.deal_data(input_path, key_data, input_type)
-                    logger.info(" %s-%s-已处理-%s" % (input_path, input_keys, msg))
+                    d = threads.deferToThread(self.deal_data, input_path, key_data, input_type)
+                    d.addCallback(self.send_msg_to)
+                    logger.info(" %s-%s-已提交处理" % (input_path, input_keys))
                 else:
-                    msg = ""
                     logger.warning(" %s-%s-未处理" % (input_path, input_keys))
-                if msg:
-                    for o in o_s:
-                        if o in self.output_panel:
-                            # 记录该输入路径
-                            if input_path not in self.output_panel[o]:
-                                self.output_panel[o].append(input_path)
-                            # 向配置的面板发送消息
-                            self.send_msg_to(o, msg)
-                            logger.info(" 已发送消息 - panel: %s-%s" % (o, msg))
-                        else:
-                            logger.warning(" 未使用 - panel: %s " % o)
+
             elif self.config.has_option("input_path", input_path):
                 logger.warning(" %s - 未设置结果展示的panel " % input_path)
             else:
@@ -146,8 +135,18 @@ class ProxyServerFactory(ServerFactory):
             logger.warning(" %s-收到条码-%s-禁止强制-force_deal:False- 无可用panel" % (_path, _keys))
             return False
 
-    def send_msg_to(self, target, msg):
-        self.send_result(target+"&"+msg)
+    def send_msg_to(self, tar):
+        o_s = self.config["Route"][tar[0]].split('/')
+        for o in o_s:
+            if o in self.output_panel:
+                # 记录该输入路径
+                if tar[0] not in self.output_panel[o]:
+                    self.output_panel[o].append(tar[0])
+                # 向配置的面板发送消息
+                self.send_result(o+"&"+tar[1])
+                logger.info(" 已发送消息 - panel: %s-%s" % (o, tar[1]))
+            else:
+                logger.warning(" 未使用 - panel: %s " % o)
 
     login_recode = {}
     state_recode = {}
@@ -252,22 +251,22 @@ class ProxyServerFactory(ServerFactory):
         else:
             return False
 
+    # 判断是否为出库设置条码
     def is_picking_function(self, _path, fnc):
         if fnc == '03':
             self.state_recode[_path] = ('[片片片] 出库', 'lens')
-            self.num_recode[_path] = 0
             self.singal_num_recode[_path] = 0
             logger.info("-%s-设置镜片出库成功-%s:%s" % (_path, self.state_recode[_path][0], fnc))
             return True
         elif fnc == '04':
             self.state_recode[_path] = ('[架架架] 出库', 'frame')
-            self.num_recode[_path] = 0
             self.singal_num_recode[_path] = 0
             logger.info("-%s-设置镜架出库成功-%s:%s" % (_path, self.state_recode[_path][0], fnc))
             return True
         else:
             return False
 
+    # 判断是否清零条码
     def is_clear_function(self, _path, fnc):
         if fnc == '02':
             self.singal_num_recode[_path] = 0
@@ -275,7 +274,8 @@ class ProxyServerFactory(ServerFactory):
             return True
         return False
 
-    def is_out_source_pick_function(self,_path, fnc):
+    # 判断是否外协收料条码
+    def is_out_source_pick_function(self, _path, fnc):
         if fnc == '05':
             self.state_recode[_path] = ('外协收料', '05')
             self.num_recode[_path] = 0
@@ -295,53 +295,54 @@ class ProxyServerFactory(ServerFactory):
     def deal_data(self, _path, _data, data_type):
         login_value = self.login_recode.get(_path, None)
         if len(_data) <= 0:
-            return "error:扫描有误"
+            msg = "error:扫描有误"
         elif self.is_login_out_value(_path, _data):
-            return "login:%s:%s&num:0&state:未扫状态条码&cls:1&info:退出成功" % ("未登录", " ", )
+            msg = "login:%s:%s&num:0&state:未扫状态条码&cls:1&info:退出成功" % ("未登录", " ", )
         elif self.is_login_value(_path, _data):
-            return "login:%s:%s&num:0&state:未扫状态条码&cls:1&info:登录成功" % \
+            msg = "login:%s:%s&num:0&state:未扫状态条码&cls:1&info:登录成功" % \
                    (self.login_recode[_path][0], self.login_recode[_path][1])
         elif self.is_state_value(_path, _data):
             # 状态录入设置
             if login_value:
-                return "state:%s&num:0&cls:1&info:设置%s成功" % (self.state_recode[_path][0], self.state_recode[_path][0])
+                msg = "state:%s&num:0&cls:1&info:设置%s成功" % (self.state_recode[_path][0], self.state_recode[_path][0])
             else:
-                return "error:未登录"
+                msg = "error:未登录"
         elif self.is_out_source_pick_function(_path, _data):
             # 外协收料设置
             if login_value:
-                return "state:%s&num:0&cls:1&info:设置%s成功" % (self.state_recode[_path][0], self.state_recode[_path][0])
+                msg = "state:%s&num:0&cls:1&info:设置%s成功" % (self.state_recode[_path][0], self.state_recode[_path][0])
             else:
-                return "error:未登录"
+                msg = "error:未登录"
         elif self.is_clear_function(_path, _data):
             # 清除设置
             if data_type == 'pic':
-                return "state:数量:0-%s&cls:1&info:数量清除成功" % self.state_recode[_path][0]
+                msg = "state:数量:0-%s&cls:1&info:数量清除成功" % self.state_recode[_path][0]
             else:
-                return "state:%s&cls:1&info:数量清除成功" % self.state_recode[_path][0]
+                msg = "state:%s&cls:1&info:数量清除成功" % self.state_recode[_path][0]
         elif data_type == 'pic' and self.is_picking_function(_path, _data):
             # 出库设置
             if login_value:
-                return "state:数量:0-%s&num:0&cls:1&info:设置%s成功" % (self.state_recode[_path][0], self.state_recode[_path][0])
+                msg = "state:数量:0-%s&num:%s&cls:1&info:设置%s成功" % (self.state_recode[_path][0], self.num_recode[_path], self.state_recode[_path][0])
             else:
-                return "error:未登录"
+                msg = "error:未登录"
         elif self.is_job_num(_data):
             # 根据设置处理生产单号
             state_value = self.state_recode.get(_path, None)
             if login_value is None:
-                return "error:未登录"
+                msg = "error:未登录"
             elif state_value is None:
-                return "error:未扫状态条码"
+                msg = "error:未扫状态条码"
             else:
                 if state_value[1] == '05':
-                    return self.out_source_pick_scan(_path, _data)
+                    msg = self.out_source_pick_scan(_path, _data)
                 elif data_type == 'pic' and (state_value[1] in ['frame', 'lens']):
-                    return self.pickingbusiness(_path, _data)
+                    msg = self.pickingbusiness(_path, _data)
                 else:
-                    return self.pickingbusinessforstatus(_path, _data)
+                    msg = self.pickingbusinessforstatus(_path, _data)
         else:
             # 其他条码
-            return "error:"+now_time() + "-" + _data + "-" + "条码未设置使用"
+            msg = "error:"+now_time() + "-" + _data + "-" + "条码未设置使用"
+        return _path, msg
 
     def out_source_pick_scan(self, _path, jobnum):
         """
@@ -415,20 +416,21 @@ class ProxyServerFactory(ServerFactory):
             returnmsg = rpc('mrp.production', 'rpc_action_picking_done', jobnum, self.state_recode[_path][1])
             # 记录出库历史
             if returnmsg == '100':
-                try:
-                    db_host = self.config.get("OdooPgSql", "host")
-                    db_port = int(self.config.get("OdooPgSql", "port"))
-                    db_usr = self.config.get("OdooPgSql", "user")
-                    db_pwd = self.config.get("OdooPgSql", "pwd")
-                    db_db = self.config.get("OdooPgSql", "db")
-                    history_db = SqlService(util=psycopg2,host=db_host,port=db_port,user=db_usr,pwd=db_pwd,db=db_db)
-                    sql = "insert into picking_history(job_num,uid,picking_time,picking_type) values ('%s','%s','%s','%s')"\
-                          % (jobnum,uid,now_time(),self.state_recode[_path][1])
-                    history_db.ExecNonQuery(sql)
-                    history_db.CloseDB()
-                    logger.warning('保存出库历史成功 - %s' % jobnum)
-                except Exception as e:
-                    logger.warning('保存出库历史失败 - %s : %s' % (jobnum, e.__repr__()))
+                if self.config.getboolean("Odoo", "record_pick_history"):
+                    try:
+                        db_host = self.config.get("OdooPgSql", "host")
+                        db_port = int(self.config.get("OdooPgSql", "port"))
+                        db_usr = self.config.get("OdooPgSql", "user")
+                        db_pwd = self.config.get("OdooPgSql", "pwd")
+                        db_db = self.config.get("OdooPgSql", "db")
+                        history_db = SqlService(util=psycopg2,host=db_host,port=db_port,user=db_usr,pwd=db_pwd,db=db_db)
+                        sql = "insert into picking_history(job_num,uid,picking_time,picking_type) values ('%s','%s','%s','%s')"\
+                              % (jobnum,uid,now_time(),self.state_recode[_path][1])
+                        history_db.ExecNonQuery(sql)
+                        history_db.CloseDB()
+                        logger.warning('保存出库历史成功 - %s' % jobnum)
+                    except Exception as e:
+                        logger.warning('保存出库历史失败 - %s : %s' % (jobnum, e.__repr__()))
             return self.build_picking_msg(_path, jobnum, returnmsg)
         except Exception as e:
             return self.build_picking_msg(_path, jobnum, "777")
@@ -693,40 +695,8 @@ def main():
     port = reactor.listenTCP(proxy_port, factory)
     logger.info('Proxy Serving 监听端口（proxy_port）： %d' % port.getHost().port)
     from twisted.internet import reactor
+    reactor.suggestThreadPoolSize(25)
     reactor.run()
-
-
-import sys
-# from PyQt5.QtWidgets import QApplication, QWidget
-#
-# from proxy_ui import Ui_Form
-
-
-
-# class MainUI(QWidget):
-#     def __init__(self):
-#         super(MainUI, self).__init__()
-#         self.Form = Ui_Form()
-#         self.Form.setupUi(self)
-#         self.Form.start_proxy.clicked.connect(self.start_action)
-#         self.Form.stop_proxy.clicked.connect(self.other_action)
-#
-#     def start_action(self):
-#         self.Form.start_proxy.setEnabled(False)
-#         self.main()
-#
-#     def other_action(self):
-#         self.Form.stop_proxy.setText("other")
-#         pass
-#
-#     def main(self):
-#         factory = ProxyServerFactory()
-#         from twisted.internet import reactor
-#         port = reactor.listenTCP(3390, factory)
-#         print('Proxy Serving transforms on port %d' % port.getHost().port)
-#         # from twisted.internet.address import IPv4Address
-#         from twisted.internet import reactor
-#         reactor.run()
 
 
 logger = logging.getLogger('Proxy')
@@ -736,7 +706,6 @@ real_path = os.path.split(os.path.realpath(__file__))[0]
 fn = real_path + '/log/log.log'
 
 fh = TimedRotatingFileHandler(fn, when='D', interval=1, backupCount=10, encoding='utf-8')
-# fh = logging.FileHandler(fn, encoding='utf-8')
 fh.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 fh.setFormatter(formatter)
@@ -747,11 +716,3 @@ config.read(real_path + "/config.conf", encoding="utf-8")
 
 if __name__ == '__main__':
     main()
-    # app = QApplication(sys.argv)
-    # # 导入twisted对 PyQt5 的兼容Reactor
-    # import qt5reactor
-    # qt5reactor.install()
-    # w = MainUI()
-    # w.setWindowTitle('代理服务实时监控')
-    # w.show()
-    # sys.exit(app.exec_())
