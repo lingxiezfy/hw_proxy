@@ -254,12 +254,12 @@ class ProxyServerFactory(ServerFactory):
     # 判断是否为出库设置条码
     def is_picking_function(self, _path, fnc):
         if fnc == '03':
-            self.state_recode[_path] = ('[片片片] 出库', 'lens')
+            self.state_recode[_path] = ('[O片O] 出库', 'lens')
             self.singal_num_recode[_path] = 0
             logger.info("-%s-设置镜片出库成功-%s:%s" % (_path, self.state_recode[_path][0], fnc))
             return True
         elif fnc == '04':
-            self.state_recode[_path] = ('[架架架] 出库', 'frame')
+            self.state_recode[_path] = ('[口架口] 出库', 'frame')
             self.singal_num_recode[_path] = 0
             logger.info("-%s-设置镜架出库成功-%s:%s" % (_path, self.state_recode[_path][0], fnc))
             return True
