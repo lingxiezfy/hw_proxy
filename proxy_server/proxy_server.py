@@ -62,6 +62,7 @@ class ProxyServerFactory(ServerFactory):
         self.deferred = [self._init_set_deferred(), self._init_lost_deferred(), self._init_result_info_deferred()]
         self.config = config
         self._init_status_history()
+        self._init_pick_task()
 
     def startFactory(self):
         result_factory = ResultClientFactory(self.deferred)
@@ -357,9 +358,6 @@ class ProxyServerFactory(ServerFactory):
                 elif data_type == 'pic' and (state_value[1] in ['frame', 'lens']):
                     self.picking_queue[_path].append(_data)
                     logger.info(" %s - 出库操作 - 加入延迟队列 - %s" % (_path, _data))
-                    if not self.pick_loop or not self.pick_loop.running:
-                        self.pick_loop = task.LoopingCall(self.pickingTask)
-                        self.pick_loop.start(0.5)
                 else:
                     d = threads.deferToThread(self.pickingbusinessforstatus, _path, _data)
                     d.addCallback(self.send_msg_to)
@@ -423,27 +421,23 @@ class ProxyServerFactory(ServerFactory):
             return _path, "login:%s:%s&state:%s&num:%d&error:%s" % \
                    (login_value[0], login_value[1], state_value[0], self.num_recode[_path], view_msg)
 
+    def _init_pick_task(self):
+        self.pick_loop = task.LoopingCall(self.pickingTask)
+        self.pick_loop.start(self.config.getfloat('Odoo','pick_timeout'))
+        logger.info(" 初始化出库延迟任务")
+
     def pickingTask(self):
         """
-        出库延迟队列
+        出库延迟任务
         :return:
         """
-        is_null = True
         path_s = list(self.picking_queue.keys())
         for _path in path_s:
             if len(self.picking_queue[_path]) > 0:
                 _data = self.picking_queue[_path].pop(0)
-                if len(self.picking_queue[_path]) > 0:
-                    is_null = False
                 logger.info(" %s - 出库操作 - 执行出库 - %s" % (_path, _data))
                 d = threads.deferToThread(self.pickingbusiness, _path, _data)
                 d.addCallback(self.send_msg_to)
-
-        if is_null:
-            try:
-                self.pick_loop.stop()
-            except:
-                pass
 
 
     def pickingbusiness(self, _path, jobnum):
