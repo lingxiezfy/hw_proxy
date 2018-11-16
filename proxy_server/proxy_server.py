@@ -6,7 +6,7 @@
 # @Software: PyCharm
 
 from twisted.protocols.basic import LineReceiver
-from twisted.internet import defer, main, threads
+from twisted.internet import defer, main, threads, task
 from twisted.internet.protocol import ServerFactory, ReconnectingClientFactory
 
 
@@ -106,9 +106,8 @@ class ProxyServerFactory(ServerFactory):
                     with open(real_path + "/config.conf", 'w', encoding="utf-8") as configfile:
                         self.config.write(configfile)
                 if self.check_for_deal(input_path, input_keys):
-                    d = threads.deferToThread(self.deal_data, input_path, key_data, input_type)
-                    d.addCallback(self.send_msg_to)
                     logger.info(" %s-%s-已提交处理" % (input_path, input_keys))
+                    self.deal_data(input_path,key_data,input_type)
                 else:
                     logger.warning(" %s-%s-未处理" % (input_path, input_keys))
 
@@ -154,6 +153,8 @@ class ProxyServerFactory(ServerFactory):
     singal_num_recode = {}
     status_history = {}
     scan_history = {}
+    picking_queue = {}
+    pick_loop = None
 
     # 登录rpc检测
     def login(self, _path, username, password):
@@ -200,7 +201,11 @@ class ProxyServerFactory(ServerFactory):
     # 判断是否为登录条码
     def is_login_value(self, _path, value):
         if value and value.startswith("9999"):
-            return self.login(_path, value[-6:], value[-6:][::-1])
+            if (_path in self.picking_queue) and self.picking_queue[_path]:
+                logger.info("-%s-禁止切换登录，%s 正在处理中" % (_path, self.state_recode[_path][0]))
+                return True
+            else:
+                return self.login(_path, value[-6:], value[-6:][::-1])
         else:
             return False
 
@@ -253,16 +258,22 @@ class ProxyServerFactory(ServerFactory):
 
     # 判断是否为出库设置条码
     def is_picking_function(self, _path, fnc):
-        if fnc == '03':
-            self.state_recode[_path] = ('[O片O] 出库', 'lens')
-            self.singal_num_recode[_path] = 0
-            logger.info("-%s-设置镜片出库成功-%s:%s" % (_path, self.state_recode[_path][0], fnc))
-            return True
-        elif fnc == '04':
-            self.state_recode[_path] = ('[口架口] 出库', 'frame')
-            self.singal_num_recode[_path] = 0
-            logger.info("-%s-设置镜架出库成功-%s:%s" % (_path, self.state_recode[_path][0], fnc))
-            return True
+        if fnc == '03' or fnc == '04':
+            if _path not in self.picking_queue:
+                self.picking_queue[_path] = []
+            if self.picking_queue[_path]:
+                logger.info("-%s-禁止切换出库条码，%s 正在处理中" % (_path, self.state_recode[_path][0]))
+                return True
+            if fnc == '03':
+                self.state_recode[_path] = ('[O片O] 出库', 'lens')
+                self.singal_num_recode[_path] = 0
+                logger.info("-%s-设置镜片出库成功-%s:%s" % (_path, self.state_recode[_path][0], fnc))
+                return True
+            elif fnc == '04':
+                self.state_recode[_path] = ('[口架口] 出库', 'frame')
+                self.singal_num_recode[_path] = 0
+                logger.info("-%s-设置镜架出库成功-%s:%s" % (_path, self.state_recode[_path][0], fnc))
+                return True
         else:
             return False
 
@@ -299,7 +310,10 @@ class ProxyServerFactory(ServerFactory):
         elif self.is_login_out_value(_path, _data):
             msg = "login:%s:%s&num:0&state:未扫状态条码&cls:1&info:退出成功" % ("未登录", " ", )
         elif self.is_login_value(_path, _data):
-            msg = "login:%s:%s&num:0&state:未扫状态条码&cls:1&info:登录成功" % \
+            if (_path in self.picking_queue) and self.picking_queue[_path]:
+                msg = "error:禁止切换登录，还存在未处理出库单，请等待完成！"
+            else:
+                msg = "login:%s:%s&num:0&state:未扫状态条码&cls:1&info:登录成功" % \
                    (self.login_recode[_path][0], self.login_recode[_path][1])
         elif self.is_state_value(_path, _data):
             # 状态录入设置
@@ -322,7 +336,10 @@ class ProxyServerFactory(ServerFactory):
         elif data_type == 'pic' and self.is_picking_function(_path, _data):
             # 出库设置
             if login_value:
-                msg = "state:数量:0-%s&num:%s&cls:1&info:设置%s成功" % (self.state_recode[_path][0], self.num_recode[_path], self.state_recode[_path][0])
+                if self.picking_queue[_path]:
+                    msg = "error:禁止切换出库条码，还存在未处理出库单，请等待完成！"
+                else:
+                    msg = "state:数量:0-%s&num:%s&cls:1&info:设置%s成功" % (self.state_recode[_path][0], self.num_recode[_path], self.state_recode[_path][0])
             else:
                 msg = "error:未登录"
         elif self.is_job_num(_data):
@@ -333,16 +350,24 @@ class ProxyServerFactory(ServerFactory):
             elif state_value is None:
                 msg = "error:未扫状态条码"
             else:
+                msg = ""
                 if state_value[1] == '05':
-                    msg = self.out_source_pick_scan(_path, _data)
+                    d = threads.deferToThread(self.out_source_pick_scan, _path, _data)
+                    d.addCallback(self.send_msg_to)
                 elif data_type == 'pic' and (state_value[1] in ['frame', 'lens']):
-                    msg = self.pickingbusiness(_path, _data)
+                    self.picking_queue[_path].append(_data)
+                    logger.info(" %s - 出库操作 - 加入延迟队列 - %s" % (_path, _data))
+                    if not self.pick_loop or not self.pick_loop.running:
+                        self.pick_loop = task.LoopingCall(self.pickingTask)
+                        self.pick_loop.start(0.5)
                 else:
-                    msg = self.pickingbusinessforstatus(_path, _data)
+                    d = threads.deferToThread(self.pickingbusinessforstatus, _path, _data)
+                    d.addCallback(self.send_msg_to)
         else:
             # 其他条码
             msg = "error:"+now_time() + "-" + _data + "-" + "条码未设置使用"
-        return _path, msg
+        if msg:
+            self.send_msg_to((_path, msg))
 
     def out_source_pick_scan(self, _path, jobnum):
         """
@@ -392,11 +417,34 @@ class ProxyServerFactory(ServerFactory):
             logger.error(" %s-%s:连接服务器失败" % (_path, jobnum))
         view_msg = now_time() + "-" + jobnum + "-" + self.state_recode[_path][0] + "-" + msg
         if success:
-            return "login:%s:%s&state:%s&num:%d&msg:%s" % \
+            return _path, "login:%s:%s&state:%s&num:%d&msg:%s" % \
                    (login_value[0], login_value[1], state_value[0], self.num_recode[_path], view_msg)
         else:
-            return "login:%s:%s&state:%s&num:%d&error:%s" % \
+            return _path, "login:%s:%s&state:%s&num:%d&error:%s" % \
                    (login_value[0], login_value[1], state_value[0], self.num_recode[_path], view_msg)
+
+    def pickingTask(self):
+        """
+        出库延迟队列
+        :return:
+        """
+        is_null = True
+        path_s = list(self.picking_queue.keys())
+        for _path in path_s:
+            if len(self.picking_queue[_path]) > 0:
+                _data = self.picking_queue[_path].pop(0)
+                if len(self.picking_queue[_path]) > 0:
+                    is_null = False
+                logger.info(" %s - 出库操作 - 执行出库 - %s" % (_path, _data))
+                d = threads.deferToThread(self.pickingbusiness, _path, _data)
+                d.addCallback(self.send_msg_to)
+
+        if is_null:
+            try:
+                self.pick_loop.stop()
+            except:
+                pass
+
 
     def pickingbusiness(self, _path, jobnum):
         """
@@ -506,7 +554,7 @@ class ProxyServerFactory(ServerFactory):
         if returnmsg == 'SHIP':
             returnmsg = "状态同步失败-订单已完成或取消"
             msg = now_time() + "-" + jobnum + "-" + self.state_recode[_path][0] + "-" + returnmsg
-            return "login:%s:%s&state:%s&num:%d&error:%s" % \
+            return _path, "login:%s:%s&state:%s&num:%d&error:%s" % \
                    (login_value[0], login_value[1], state_value[0], self.num_recode[_path], msg)
         elif returnmsg != '100':
 
@@ -522,7 +570,7 @@ class ProxyServerFactory(ServerFactory):
                 returnmsg = "状态同步失败-异常"
 
             msg = now_time() + "-" + jobnum + "-" + self.state_recode[_path][0] + "-" + returnmsg
-            return "login:%s:%s&state:%s&num:%d&error:%s" % \
+            return _path, "login:%s:%s&state:%s&num:%d&error:%s" % \
                    (login_value[0], login_value[1], state_value[0], self.num_recode[_path], msg)
 
         else:
@@ -531,7 +579,7 @@ class ProxyServerFactory(ServerFactory):
             self.singal_num_recode[_path] += 1
             msg = now_time() + "-" + jobnum + "-" + self.state_recode[_path][0] + "-" + returnmsg
 
-            return "login:%s:%s&state:%s&num:%d&msg:%s" % \
+            return _path, "login:%s:%s&state:%s&num:%d&msg:%s" % \
                    (login_value[0], login_value[1], state_value[0], self.num_recode[_path], msg)
 
     def build_picking_msg(self, _path, jobnum, returnmsg):
@@ -559,7 +607,7 @@ class ProxyServerFactory(ServerFactory):
                 returnmsg = "出库失败-异常"
 
             msg = now_time() + "-" + jobnum + "-" + self.state_recode[_path][0] + "-" + returnmsg
-            return "login:%s:%s&state:数量:%s-%s&num:%d&error:%s" % \
+            return _path, "login:%s:%s&state:数量:%s-%s&num:%d&error:%s" % \
                    (login_value[0], login_value[1], self.singal_num_recode[_path], state_value[0], self.num_recode[_path], msg)
 
         else:
@@ -568,7 +616,7 @@ class ProxyServerFactory(ServerFactory):
             self.singal_num_recode[_path] += 1
             msg = now_time() + "-" + jobnum + "-" + self.state_recode[_path][0] + "-" + returnmsg
 
-            return "login:%s:%s&state:数量:%s-%s&num:%d&msg:%s" % \
+            return _path, "login:%s:%s&state:数量:%s-%s&num:%d&msg:%s" % \
                    (login_value[0], login_value[1], self.singal_num_recode[_path], state_value[0], self.num_recode[_path], msg)
 
 
