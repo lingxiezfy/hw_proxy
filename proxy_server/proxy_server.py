@@ -6,7 +6,7 @@
 # @Software: PyCharm
 
 from twisted.protocols.basic import LineReceiver
-from twisted.internet import defer, main, threads, task
+from twisted.internet import defer, main, threads
 from twisted.internet.protocol import ServerFactory, ReconnectingClientFactory
 
 
@@ -62,7 +62,6 @@ class ProxyServerFactory(ServerFactory):
         self.deferred = [self._init_set_deferred(), self._init_lost_deferred(), self._init_result_info_deferred()]
         self.config = config
         self._init_status_history()
-        self._init_pick_task()
 
     def startFactory(self):
         result_factory = ResultClientFactory(self.deferred)
@@ -155,7 +154,7 @@ class ProxyServerFactory(ServerFactory):
     status_history = {}
     scan_history = {}
     picking_queue = {}
-    pick_loop = None
+    picking_defer = {}
 
     # 登录rpc检测
     def login(self, _path, username, password):
@@ -262,6 +261,7 @@ class ProxyServerFactory(ServerFactory):
         if fnc == '03' or fnc == '04':
             if _path not in self.picking_queue:
                 self.picking_queue[_path] = []
+                self.picking_defer[_path] = None
             if self.picking_queue[_path]:
                 logger.info("-%s-禁止切换出库条码，%s 正在处理中" % (_path, self.state_recode[_path][0]))
                 return True
@@ -358,6 +358,10 @@ class ProxyServerFactory(ServerFactory):
                 elif data_type == 'pic' and (state_value[1] in ['frame', 'lens']):
                     self.picking_queue[_path].append(_data)
                     logger.info(" %s - 出库操作 - 加入延迟队列 - %s" % (_path, _data))
+                    if not self.picking_defer[_path]:
+                        logger.info(" %s - 出库操作 - 启动出库执行" % _path)
+                        from twisted.internet import reactor
+                        reactor.callLater(0.01, self.pickingTask, _path)
                 else:
                     d = threads.deferToThread(self.pickingbusinessforstatus, _path, _data)
                     d.addCallback(self.send_msg_to)
@@ -421,24 +425,20 @@ class ProxyServerFactory(ServerFactory):
             return _path, "login:%s:%s&state:%s&num:%d&error:%s" % \
                    (login_value[0], login_value[1], state_value[0], self.num_recode[_path], view_msg)
 
-    def _init_pick_task(self):
-        self.pick_loop = task.LoopingCall(self.pickingTask)
-        self.pick_loop.start(self.config.getfloat('Odoo','pick_timeout'))
-        logger.info(" 初始化出库延迟任务")
-
-    def pickingTask(self):
+    def pickingTask(self, _path):
         """
-        出库延迟任务
+        出库任务队列
         :return:
         """
-        path_s = list(self.picking_queue.keys())
-        for _path in path_s:
+        if _path in self.picking_queue:
             if len(self.picking_queue[_path]) > 0:
                 _data = self.picking_queue[_path].pop(0)
                 logger.info(" %s - 出库操作 - 执行出库 - %s" % (_path, _data))
-                d = threads.deferToThread(self.pickingbusiness, _path, _data)
-                d.addCallback(self.send_msg_to)
-
+                self.picking_defer[_path] = threads.deferToThread(self.pickingbusiness, _path, _data)
+                self.picking_defer[_path].addCallback(self.pickingTask)
+            else:
+                logger.info(" %s - 出库操作 - 队列已空 - 关闭执行" % _path)
+                self.picking_defer[_path] = None
 
     def pickingbusiness(self, _path, jobnum):
         """
@@ -473,9 +473,10 @@ class ProxyServerFactory(ServerFactory):
                         logger.warning('保存出库历史成功 - %s' % jobnum)
                     except Exception as e:
                         logger.warning('保存出库历史失败 - %s : %s' % (jobnum, e.__repr__()))
-            return self.build_picking_msg(_path, jobnum, returnmsg)
+            self.send_msg_to(self.build_picking_msg(_path, jobnum, returnmsg))
         except Exception as e:
-            return self.build_picking_msg(_path, jobnum, "777")
+            self.send_msg_to(self.build_picking_msg(_path, jobnum, "777"))
+        return _path
 
     # 上传扫描订单的状态，_path为扫描来源，jobnum为扫描的生产单号
     def pickingbusinessforstatus(self, _path, jobnum):
