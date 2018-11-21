@@ -27,12 +27,12 @@
         <div class="col-sm-3 col-md-2 sidebar">
             <form id="scan_form">
                 <div class="form-group">
-                    <label >请选择：报损、不良、退库</label>
+                    <label ><span>{{break_title}}</span></label>
                     <select id="break_type" name="break_type" v-model="break_type" class="form-control">
                         <option value="">请选择</option>
                         <option value="S">报损</option>
                         <option value="B">不良</option>
-                        <option value="R">退库</option>
+                        <option value="R" id="break_type_return">退库</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -96,9 +96,9 @@
                 <div class="panel panel-primary">
                     <div class="panel-heading">
                         <h3 class="panel-title">
-                            <label class="header_title ">
+                            <label>
                                 <span class="msg_red" v-if="break_type == ''">{{break_title}}</span>
-                                <span v-else="break_type == ''">{{break_title}}</span>
+                                <span v-else>{{break_title}}</span>
                             </label>
                             <span id="success_num" class="ele_hidden"> &nbsp;&nbsp;&nbsp;完成数：<label >0</label></span>
 

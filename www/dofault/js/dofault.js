@@ -23,8 +23,14 @@ function init() {
     } else {
         $('#clear_btn').addClass('ele_hidden')
     }
-
+    if(request['break_type']){
+        app.break_type = request['break_type'];
+        $('#break_type').attr('disabled',true)
+    }else{
+        $('#break_type_return').addClass('ele_hidden')
+    }
     $('.header_title').text(request['header_title']);
+    document.title = request['header_title'];
     $('.num_name').text(request['num_name'])
 
 }
@@ -42,7 +48,7 @@ function GetRequest() {
     return theRequest;
 }
 
-init();
+
 
 function add_msg(panel_id, msg) {
     var panel_length = $('#' + panel_id + ' .panel-body').children("div").length;
@@ -126,7 +132,7 @@ const app = new Vue({
     data:{
         break_type: '',
         data_url:'',
-        break_title:'请选择：报损 、 不良 、 退库',
+        break_title:'请选择：报损 、 不良',
         break_part:'',
         break_part_T:'',
         section_list:[],
@@ -150,7 +156,9 @@ const app = new Vue({
                 this.break_title = "退库";
                 this.break_reason = 'R888'
             } else {
-                this.break_title = "请选择：报损 、 不良 或 退库"
+                this.break_title = "请选择：报损 、 不良"
+                this.section_list = [];
+                this.fault_list = [];
             }
         },
         data_url:function (new_url,old_url) {
@@ -172,6 +180,9 @@ const app = new Vue({
                 this.break_part_T = ''
             }
             this.reason_section = '';
+        },
+        reason_section:function (new_section,old_section) {
+            this.break_reason = ''
         }
     }
 });
@@ -219,3 +230,5 @@ function do_falut() {
     $('#job_num').val('');
     $('#scan_form').submit(false);
 }
+
+init();
