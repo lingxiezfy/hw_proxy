@@ -126,7 +126,7 @@ const app = new Vue({
     data:{
         break_type: '',
         data_url:'',
-        break_title:'请选择：报损 或 不良',
+        break_title:'请选择：报损 、 不良 、 退库',
         break_part:'',
         break_part_T:'',
         section_list:[],
@@ -137,12 +137,17 @@ const app = new Vue({
         break_type: function (new_type,old_type) {
             if(new_type == 'S'){
                 this.data_url = 'faultcode.rpy?break_type=S';
-                this.break_title = "报损"
+                this.break_title = "报损";
+                this.break_reason = ''
             }else if(new_type == 'B'){
                 this.data_url = 'faultcode.rpy?break_type=B';
-                this.break_title = "不良"
-            }else {
-                this.break_title = "请选择：报损 或 不良"
+                this.break_title = "不良";
+                this.break_reason = ''
+            }else if (new_type == 'R'){
+                this.break_title = "退库";
+                this.break_reason = 'R888'
+            } else {
+                this.break_title = "请选择：报损 、 不良 或 退库"
             }
         },
         data_url:function (new_url,old_url) {
@@ -170,7 +175,7 @@ const app = new Vue({
 
 function do_falut() {
     if(app.break_type == ''){
-        add_error('view_panel', '请选择 报损、不良!');
+        add_error('view_panel', '请选择 报损、不良 或 退库!');
     }else if(app.break_part == ''){
         add_error('view_panel', '请选择 镜架、镜片!');
     }else  if(app.break_reason == ''){

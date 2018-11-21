@@ -46,12 +46,14 @@ class DoFault(Resource):
                 'tracking_number': job_num,
                 'worker_center_id': self.config['worker_center'][break_reason[0:1]],
                 'location_id': "Waiting To Production",
-                'scrap_location_id': "Scrap In C" if break_type == 'S' else "Bad In C",
+                'scrap_location_id':
+                    "Scrap In C" if break_type == 'S' else "Bad In C" if break_type == 'B' else 'Waiting To Sort',
                 'scrap_type': request.args[b'break_part'][0].decode("utf-8"),
                 'scrap_fault_cause_id': break_reason[1:],
                 'scrap_action_id': break_type,
                 'qty': '1'
             }
+            print(falut_data)
             json_fault_data = json.dumps(falut_data)
             try:
                 rpc = RPCProxy(uid, pwd, host=rpc_host, port=rpc_port, dbname=rpc_db)

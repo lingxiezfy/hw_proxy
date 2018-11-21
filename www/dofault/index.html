@@ -27,11 +27,12 @@
         <div class="col-sm-3 col-md-2 sidebar">
             <form id="scan_form">
                 <div class="form-group">
-                    <label >请选择：报损、不良</label>
+                    <label >请选择：报损、不良、退库</label>
                     <select id="break_type" name="break_type" v-model="break_type" class="form-control">
                         <option value="">请选择</option>
                         <option value="S">报损</option>
                         <option value="B">不良</option>
+                        <option value="R">退库</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -43,7 +44,7 @@
                         <option value="frame">镜架（F）</option>
                     </select>
                 </div>
-                <div class="form-group">
+                <div class="form-group" v-if="break_type != 'R'">
                     <label >请选择：原因</label>
                     <select id="break_reason" name="break_reason" v-model="break_reason" class="form-control">
                         <option value="">请选择</option>
