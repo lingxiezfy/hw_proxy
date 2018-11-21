@@ -131,18 +131,21 @@ const app = new Vue({
         break_part_T:'',
         section_list:[],
         fault_list:[],
-        break_reason:''
+        break_reason:'',
+        reason_section:''
     },
     watch:{
         break_type: function (new_type,old_type) {
             if(new_type == 'S'){
                 this.data_url = 'faultcode.rpy?break_type=S';
                 this.break_title = "报损";
-                this.break_reason = ''
+                this.break_reason = '';
+                this.break_part = '';
             }else if(new_type == 'B'){
                 this.data_url = 'faultcode.rpy?break_type=B';
                 this.break_title = "不良";
-                this.break_reason = ''
+                this.break_reason = '';
+                this.break_part = '';
             }else if (new_type == 'R'){
                 this.break_title = "退库";
                 this.break_reason = 'R888'
@@ -168,7 +171,7 @@ const app = new Vue({
             }else {
                 this.break_part_T = ''
             }
-
+            this.reason_section = '';
         }
     }
 });

@@ -44,12 +44,26 @@
                         <option value="frame">镜架（F）</option>
                     </select>
                 </div>
+                <div class="form-group" v-if="break_type == 'S' && break_part_T == 'B'">
+                    <label >车间：<span class="msg_red">不选将显示全部原因</span></label>
+                    <select id="reason_section" name="reason_section" v-model="reason_section" class="form-control">
+                        <option value="">请选择车间筛选原因</option>
+                        <template v-for="section in section_list">
+                            <option :value="section.section_code">{{section.section_code}} {{section.section_name}}</option>
+                        </template>
+                    </select>
+                </div>
                 <div class="form-group" v-if="break_type != 'R'">
                     <label >请选择：原因</label>
                     <select id="break_reason" name="break_reason" v-model="break_reason" class="form-control">
                         <option value="">请选择</option>
                         <template v-for="falut in fault_list">
-                            <option v-if="falut.frl == break_part_T" value="falut.fault_code">{{falut.fault_code}} {{falut.fault_name}}</option>
+                            <template v-if="break_type == 'S' && break_part_T == 'B'">
+                                <option v-if="falut.frl == break_part_T && (falut.section_code == reason_section || reason_section == '')" :value="falut.fault_code">{{falut.fault_code}} {{falut.fault_name}}</option>
+                            </template>
+                            <template v-else>
+                                <option v-if="falut.frl == break_part_T" :value="falut.fault_code">{{falut.fault_code}} {{falut.fault_name}}</option>
+                            </template>
                         </template>
                     </select>
                 </div>
