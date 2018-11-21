@@ -1,4 +1,4 @@
-var header_title = '报损、不良';
+var header_title = '报损、不良、退库';
 var num_name = '生产单号';
 var do_clear = true;
 var do_sum = true;
