@@ -228,6 +228,7 @@ function do_falut() {
         })
     }
     $('#job_num').val('');
+    app.break_reason = '';
     $('#scan_form').submit(false);
 }
 

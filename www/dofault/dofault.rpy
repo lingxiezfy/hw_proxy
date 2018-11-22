@@ -53,7 +53,6 @@ class DoFault(Resource):
                 'scrap_action_id': break_type,
                 'qty': '1'
             }
-            print(falut_data)
             json_fault_data = json.dumps(falut_data)
             try:
                 rpc = RPCProxy(uid, pwd, host=rpc_host, port=rpc_port, dbname=rpc_db)
