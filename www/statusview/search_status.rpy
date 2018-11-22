@@ -116,9 +116,26 @@ class order_list_resource(Resource):
 
         sql_info = "SELECT soe.r_sph,soe.l_sph,soe.r_cyl,soe.l_cyl,soe.r_axis,soe.l_axis,soe.r_add,soe.l_add," \
                    "soe.r_prism1,soe.l_prism1,soe.r_base1,soe.l_base1,soe.r_prism2,soe.l_prism2,soe.r_base2," \
-                   "soe.l_base2,soe.r_ct,soe.l_ct,soe.r_et,soe.l_et,soe.r_base_curve,soe.l_base_curve,soe.r_pd,soe.l_pd," \
-                   "soe.r_fh,soe.l_fh,soe.dbl,soe.remark,lo.name l_name,ro.name r_name,soe.l_dia,soe.r_dia,lot.name l_tint,rot.name r_tini " \
-                   "FROM (SELECT * from sos_order_export WHERE job_num= '%s') soe " \
+                   "soe.l_base2,soe.r_ct,soe.l_ct,soe.r_et,soe.l_et,soe.r_base_curve,soe.l_base_curve,soe.r_pd," \
+                   "soe.l_pd,soe.r_fh,soe.l_fh,soe.dbl,soe.remark,lo.name l_name,ro.name r_name,soe.l_dia," \
+                   "soe.r_dia,lot.name l_tint,rot.name r_tini, soe.framename,soe.r_lenname,soe.l_lenname " \
+                   "FROM ( " \
+                   "select f.*,a.framename,a.r_lenname,a.l_lenname from ( " \
+                   "select job_num,max(framename) as framename,max(r_lenname) as r_lenname," \
+                   "max(l_lenname) as l_lenname " \
+                   "from ( "\
+                   "select b.name as job_num," \
+                   "case when c.frl='frame' THEN e.name end as framename," \
+                   "case when c.frl='right' THEN e.name end as r_lenname," \
+                   "case when c.frl='left' THEN e.name end as l_lenname " \
+                   "from mrp_production a " \
+                   "inner join stock_production_lot b on a.restrict_lot_id=b.id " \
+                   "inner join stock_move c on a.\"id\"=c.raw_material_production_id " \
+                   "inner join product_product d on c.product_id=d.\"id\" " \
+                   "inner join product_template e on d.product_tmpl_id=e.\"id\" " \
+                   "where b.name='%s') a group by job_num) a " \
+                   "inner join sos_order_export f on a.job_num=f.job_num "\
+                   ") soe " \
                    "LEFT JOIN (SELECT order_id,name from sale_order_line WHERE frl = 'left') lo on lo.order_id = soe.sale_order " \
                    "LEFT JOIN (SELECT order_id,name from sale_order_line WHERE frl = 'right') ro on ro.order_id = soe.sale_order " \
                    "LEFT JOIN (SELECT order_id,name from sale_order_line WHERE frl = 'left_tint') lot on lot.order_id = soe.sale_order " \

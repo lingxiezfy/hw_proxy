@@ -132,13 +132,31 @@ function get_status(url,job_num) {
                 $(R2).append('<td>R</td>');
                 var r_dia = fitle_Null(data.info[31]);
                 var r_tint = fitle_Null(data.info[33]);
-                $(R2).append('<td colspan="14"><b>'+fitle_Null(data.info[29])+(r_dia == '&nbsp;'?r_dia:('&nbsp;/&nbsp;'+r_dia))+(r_tint == '&nbsp;'?r_tint:('&nbsp;/&nbsp;'+r_tint))+'</b></td>');
+                var r_lenname = fitle_Null(data.info[35]);
+                $(R2).append('<td colspan="14"><b>'+
+                    (r_lenname)+' ('+
+                    fitle_Null(data.info[29])+
+                    (r_dia == '&nbsp;'?r_dia:('&nbsp;/&nbsp;'+r_dia))+
+                    (r_tint == '&nbsp;'?r_tint:('&nbsp;/&nbsp;'+r_tint))+')'+
+                    '</b></td>');
 
                 var L2 = $('<tr>');
                 $(L2).append('<td>L</td>');
                 var l_dia = fitle_Null(data.info[30]);
                 var l_tint = fitle_Null(data.info[32]);
-                $(L2).append('<td colspan="14"><b>'+fitle_Null(data.info[28])+(l_dia == '&nbsp;'?l_dia:('&nbsp;/&nbsp;'+l_dia))+(l_tint == '&nbsp;'?l_tint:('&nbsp;/&nbsp;'+l_tint))+'</b></td>');
+                var l_lenname = fitle_Null(data.info[36]);
+                $(L2).append('<td colspan="14"><b>'+
+                    (l_lenname)+' ('+
+                    fitle_Null(data.info[28])+
+                    (l_dia == '&nbsp;'?l_dia:('&nbsp;/&nbsp;'+l_dia))+
+                    (l_tint == '&nbsp;'?l_tint:('&nbsp;/&nbsp;'+l_tint))+')'+
+
+                    '</b></td>');
+
+                var F = $('<tr>');
+                $(F).append('<td>F</td>');
+                var framename = fitle_Null(data.info[34]);
+                $(F).append('<td colspan="14"><b>'+framename+'</b></td>');
 
                 var Remark = $('<tr>');
                 $(Remark).append('<td>Remark</td>');
@@ -148,6 +166,7 @@ function get_status(url,job_num) {
                 $(info_tb).append(L1);
                 $(info_tb).append(R2);
                 $(info_tb).append(L2);
+                $(info_tb).append(F);
                 $(info_tb).append(Remark);
 
                 $("#msg_info").text("已查询 "+job_num);
