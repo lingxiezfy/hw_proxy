@@ -21,6 +21,7 @@ import time
 import logging
 from logging.handlers import TimedRotatingFileHandler
 import os
+import json
 
 
 # 扫描枪管理客户端传输协议，基于LineReceiver
@@ -235,10 +236,32 @@ class ProxyServerFactory(ServerFactory):
     def check_status(self, _path, status):
         status = status.upper()
         if status in self.status_history:
+            # 状态录入条码
             self.state_recode[_path] = (self.status_history[status], status)
             self.num_recode[_path] = 0
             self.singal_num_recode[_path] = 0
             logger.info("-%s-设置状态成功-%s:%s" % (_path, self.state_recode[_path][0], status))
+            return True
+        if status == '05':
+            # 外协收料条码
+            self.state_recode[_path] = ('外协收料', '05')
+            self.num_recode[_path] = 0
+            self.singal_num_recode[_path] = 0
+            logger.info("-%s-设置外协收料成功-%s:%s" % (_path, self.state_recode[_path][0], status))
+            return True
+        if status == '06':
+            # 销售出库单
+            self.state_recode[_path] = ('销售出库单', '06')
+            self.num_recode[_path] = 0
+            self.singal_num_recode[_path] = 0
+            logger.info("-%s-设置销售出库单成功-%s:%s" % (_path, self.state_recode[_path][0], status))
+            return True
+        if status == '07':
+            # 销售出库单
+            self.state_recode[_path] = ('分拣发货', '07')
+            self.num_recode[_path] = 0
+            self.singal_num_recode[_path] = 0
+            logger.info("-%s-设置分拣发货成功-%s:%s" % (_path, self.state_recode[_path][0], status))
             return True
         return False
 
@@ -252,6 +275,12 @@ class ProxyServerFactory(ServerFactory):
     # 判断是否为生产单号
     def is_job_num(self, value):
         if len(value) == 10:
+            return True
+        else:
+            return False
+
+    def is_c_num(self, value):
+        if value and (value.startswith('c/') or value.startswith('C/')):
             return True
         else:
             return False
@@ -278,21 +307,33 @@ class ProxyServerFactory(ServerFactory):
         else:
             return False
 
+    # 判断是否为退库设置条码
+    def is_picking_return_function(self, _path, fnc):
+        if fnc.startswith('08'):
+            fnc = fnc.upper()
+            if fnc == '08R':
+                self.state_recode[_path] = ('[片OO]-右右-退库', 'right')
+                self.singal_num_recode[_path] = 0
+                logger.info("-%s-设置右镜片退库成功-%s:%s" % (_path, self.state_recode[_path][0], fnc))
+                return True
+            elif fnc == '08L':
+                self.state_recode[_path] = ('[OO片]-左左-退库', 'left')
+                self.singal_num_recode[_path] = 0
+                logger.info("-%s-设置左镜片退库成功-%s:%s" % (_path, self.state_recode[_path][0], fnc))
+                return True
+            elif fnc == '08F':
+                self.state_recode[_path] = ('[口架口]-架架-退库', 'frame')
+                self.singal_num_recode[_path] = 0
+                logger.info("-%s-设置镜架退库成功-%s:%s" % (_path, self.state_recode[_path][0], fnc))
+                return True
+        else:
+            return False
+
     # 判断是否清零条码
     def is_clear_function(self, _path, fnc):
         if fnc == '02':
             self.singal_num_recode[_path] = 0
             logger.info("-%s-执行数量清零 - %s" % (_path, fnc))
-            return True
-        return False
-
-    # 判断是否外协收料条码
-    def is_out_source_pick_function(self, _path, fnc):
-        if fnc == '05':
-            self.state_recode[_path] = ('外协收料', '05')
-            self.num_recode[_path] = 0
-            self.singal_num_recode[_path] = 0
-            logger.info("-%s-设置外协收料成功-%s:%s" % (_path, self.state_recode[_path][0], fnc))
             return True
         return False
 
@@ -317,23 +358,23 @@ class ProxyServerFactory(ServerFactory):
                 msg = "login:%s:%s&num:0&state:未扫状态条码&cls:1&info:登录成功" % \
                    (self.login_recode[_path][0], self.login_recode[_path][1])
         elif self.is_state_value(_path, _data):
-            # 状态录入设置
+            # 状态、普通功能设置
             if login_value:
-                msg = "state:%s&num:0&cls:1&info:设置%s成功" % (self.state_recode[_path][0], self.state_recode[_path][0])
-            else:
-                msg = "error:未登录"
-        elif self.is_out_source_pick_function(_path, _data):
-            # 外协收料设置
-            if login_value:
-                msg = "state:%s&num:0&cls:1&info:设置%s成功" % (self.state_recode[_path][0], self.state_recode[_path][0])
+                if self.state_recode[_path][1] in self.config['Odoo']['use_single_num']:
+                    # 带单次计数
+                    msg = "state:数量:0-%s&num:0&cls:1&info:数量清除成功" % self.state_recode[_path][0]
+                else:
+                    msg = "state:%s&num:0&cls:1&info:设置%s成功" % (self.state_recode[_path][0], self.state_recode[_path][0])
             else:
                 msg = "error:未登录"
         elif self.is_clear_function(_path, _data):
             # 清除设置
-            if data_type == 'pic':
+            if (_path in self.state_recode) and self.state_recode[_path] and \
+                    self.state_recode[_path][1] in self.config['Odoo']['use_single_num']:
+                # 带单次计数
                 msg = "state:数量:0-%s&cls:1&info:数量清除成功" % self.state_recode[_path][0]
             else:
-                msg = "state:%s&cls:1&info:数量清除成功" % self.state_recode[_path][0]
+                msg = "cls:1&info:清除成功"
         elif data_type == 'pic' and self.is_picking_function(_path, _data):
             # 出库设置
             if login_value:
@@ -341,6 +382,12 @@ class ProxyServerFactory(ServerFactory):
                     msg = "error:禁止切换出库条码，还存在未处理出库单，请等待完成！"
                 else:
                     msg = "state:数量:0-%s&num:%s&cls:1&info:设置%s成功" % (self.state_recode[_path][0], self.num_recode[_path], self.state_recode[_path][0])
+            else:
+                msg = "error:未登录"
+        elif self.is_picking_return_function(_path, _data):
+            # 退库设置
+            if login_value:
+                msg = "state:数量:0-%s&num:%s&cls:1&info:设置%s成功" % (self.state_recode[_path][0], self.num_recode[_path], self.state_recode[_path][0])
             else:
                 msg = "error:未登录"
         elif self.is_job_num(_data):
@@ -352,8 +399,17 @@ class ProxyServerFactory(ServerFactory):
                 msg = "error:未扫状态条码"
             else:
                 msg = ""
-                if state_value[1] == '05':
+                if state_value[1] == '07':
+                    # 分拣发货
+                    d = threads.deferToThread(self.c_leg_out_scan, _path, _data)
+                    d.addCallback(self.send_msg_to)
+                elif state_value[1] == '05':
+                    # 外协收料
                     d = threads.deferToThread(self.out_source_pick_scan, _path, _data)
+                    d.addCallback(self.send_msg_to)
+                elif '退库' in state_value[0]:
+                    # 退库
+                    d = threads.deferToThread(self.picking_return, _path, _data)
                     d.addCallback(self.send_msg_to)
                 elif data_type == 'pic' and (state_value[1] in ['frame', 'lens']):
                     self.picking_queue[_path].append(_data)
@@ -362,14 +418,117 @@ class ProxyServerFactory(ServerFactory):
                         logger.info(" %s - 出库操作 - 启动出库执行" % _path)
                         from twisted.internet import reactor
                         reactor.callLater(0.01, self.pickingTask, _path)
-                else:
+                elif state_value[1] != '06':
+                    # 状态录入
                     d = threads.deferToThread(self.pickingbusinessforstatus, _path, _data)
                     d.addCallback(self.send_msg_to)
+        elif self.is_c_num(_data):
+            # C/ 单号
+            state_value = self.state_recode.get(_path, None)
+            if login_value is None:
+                msg = "error:未登录"
+            elif state_value is None:
+                msg = "error:未扫状态条码"
+            else:
+                msg = ""
+                if state_value[1] == '06':
+                    d = threads.deferToThread(self.c_out_scan, _path, _data.upper())
+                    d.addCallback(self.send_msg_to)
+                else:
+                    msg = "error:" + now_time() + "-" + _data + "-" + "请设置正确的功能"
         else:
             # 其他条码
             msg = "error:"+now_time() + "-" + _data + "-" + "条码未设置使用"
         if msg:
             self.send_msg_to((_path, msg))
+
+    def c_leg_out_scan(self, _path, job_num):
+        """
+        分拣发货
+        :param _path:
+        :param job_num:
+        :return:
+        """
+        login_value = self.login_recode[_path]
+        state_value = self.state_recode[_path]
+        if job_num in self.scan_history:
+            msg = now_time() + "-" + job_num + "-" + self.state_recode[_path][0] + "-" + '重复扫描！'
+        else:
+            try:
+                host = self.config.get("Odoo", "rpc_host")
+                port = self.config.get("Odoo", "rpc_port")
+                db = self.config.get("Odoo", "rpc_db")
+                maxHistory = self.config["Odoo"]["maxHistory"]
+
+                uid = login_value[2]
+                pwd = login_value[3]
+                rpc = RPCProxy(uid, pwd, host=host, port=port, dbname=db)
+                result = self.rpc('stock.picking', 'leg_button_delivery', job_num, 'Frames', 4)
+
+                if 'success' in result:
+                    if len(self.scan_history[_path]) == maxHistory:
+                        self.scan_history[_path].pop(0)
+                    self.scan_history[_path].append(job_num)
+                    self.num_recode[_path] += 1
+                    self.singal_num_recode[_path] += 1
+                    msg = now_time() + "-" + job_num + "-" + self.state_recode[_path][0] + "-" + '操作成功！'
+                    return _path, "login:%s:%s&state:%s&num:%d&msg:%s" % \
+                           (login_value[0], login_value[1], state_value[0],
+                            self.num_recode[_path], msg)
+                elif '400' in result:
+                    msg = now_time() + "-" + job_num + "-" + self.state_recode[_path][0] + "-" + '未领料不能报损！'
+                    pass
+                elif '501' in result:
+                    msg = now_time() + "-" + job_num + "-" + self.state_recode[_path][0] + "-" + '打印失败！'
+                    pass
+                else:
+                    msg = now_time() + "-" + job_num + "-" + self.state_recode[_path][0] + "-" + '操作失败！'
+            except:
+                msg = now_time() + "-" + job_num + "-" + self.state_recode[_path][0] + "-" + '发生异常！'
+        return _path, "login:%s:%s&state:%s&num:%d&error:%s" % \
+               (login_value[0], login_value[1], state_value[0],
+                self.num_recode[_path], msg)
+
+    def c_out_scan(self, _path, _c_out):
+        """
+        调拨单出库，C/OUT/...
+        :param _path:
+        :param _c_out:
+        :return:
+        """
+        login_value = self.login_recode[_path]
+        state_value = self.state_recode[_path]
+        if _c_out in self.scan_history:
+            msg = now_time() + "-" + _c_out + "-" + self.state_recode[_path][0] + "-" + '重复扫描！'
+        else:
+            try:
+                host = self.config.get("Odoo", "rpc_host")
+                port = self.config.get("Odoo", "rpc_port")
+                db = self.config.get("Odoo", "rpc_db")
+                maxHistory = self.config["Odoo"]["maxHistory"]
+
+                uid = login_value[2]
+                pwd = login_value[3]
+                rpc = RPCProxy(uid, pwd, host=host, port=port, dbname=db)
+                result = rpc('stock.picking', 'action_done_remote', _c_out)
+
+                if 'success' in result:
+                    if len(self.scan_history[_path]) == maxHistory:
+                        self.scan_history[_path].pop(0)
+                    self.scan_history[_path].append(_c_out)
+                    self.num_recode[_path] += 1
+                    self.singal_num_recode[_path] += 1
+                    msg = now_time() + "-" + _c_out + "-" + self.state_recode[_path][0] + "-" + '操作成功！'
+                    return _path, "login:%s:%s&state:%s&num:%d&msg:%s" % \
+                           (login_value[0], login_value[1], state_value[0],
+                            self.num_recode[_path], msg)
+                else:
+                    msg = now_time() + "-" + _c_out + "-" + self.state_recode[_path][0] + "-" + '操作失败！'
+            except:
+                msg = now_time() + "-" + _c_out + "-" + self.state_recode[_path][0] + "-" + '发生异常！'
+        return _path, "login:%s:%s&state:%s&num:%d&error:%s" % \
+               (login_value[0], login_value[1], state_value[0],
+                self.num_recode[_path], msg)
 
     def out_source_pick_scan(self, _path, jobnum):
         """
@@ -477,6 +636,57 @@ class ProxyServerFactory(ServerFactory):
         except Exception as e:
             self.send_msg_to(self.build_picking_msg(_path, jobnum, "777"))
         return _path
+
+    def picking_return(self, _path, job_num):
+        """
+        退库逻辑
+        :param _path:
+        :param job_num:
+        :return:
+        """
+        login_value = self.login_recode[_path]
+        state_value = self.state_recode[_path]
+        try:
+            host = self.config.get("Odoo", "rpc_host")
+            port = self.config.get("Odoo", "rpc_port")
+            db = self.config.get("Odoo", "rpc_db")
+            uid = login_value[2]
+            password = login_value[3]
+            falut_data = {
+                'tracking_number': job_num,
+                'worker_center_id': '小仓',
+                'location_id': "Waiting To Production",
+                'scrap_location_id': 'Waiting To Sort',
+                'scrap_type': self.state_recode[_path][1],
+                'scrap_fault_cause_id': '888',
+                'scrap_action_id': 'R',
+                'qty': '1'
+            }
+            json_fault_data = json.dumps(falut_data)
+            rpc = RPCProxy(uid, password, host=host, port=port, dbname=db)
+            result = rpc('mrp.workorder', 'do_scrap_production_new', json_fault_data)
+            if 'success' in result:
+                self.num_recode[_path] += 1
+                self.singal_num_recode[_path] += 1
+                msg = now_time() + "-" + job_num + "-" + self.state_recode[_path][0] + "- 操作成功！"
+                return _path, "login:%s:%s&state:数量:%s-%s&num:%d&msg:%s" % \
+                       (login_value[0], login_value[1], self.singal_num_recode[_path], state_value[0],
+                        self.num_recode[_path], msg)
+
+            elif '400' in result:
+                msg = now_time() + "-" + job_num + "-" + self.state_recode[_path][0] + "- 未领料不能报损! - 操作失败！"
+            elif 'no stock' in result:
+                msg = now_time() + "-" + job_num + "-" + self.state_recode[_path][0] +\
+                      '- 库存不足！- 操作失败！'
+            else:
+                msg = now_time() + "-" + job_num + "-" + self.state_recode[_path][0] +\
+                      '- 单号有误 - 操作失败！'
+        except Exception as e:
+            msg = now_time() + "-" + job_num + "-" + self.state_recode[_path][0] + \
+                  '- 系统异常！'
+        return _path, "login:%s:%s&state:数量:%s-%s&num:%d&error:%s" % \
+               (login_value[0], login_value[1], self.singal_num_recode[_path], state_value[0], self.num_recode[_path],
+                msg)
 
     # 上传扫描订单的状态，_path为扫描来源，jobnum为扫描的生产单号
     def pickingbusinessforstatus(self, _path, jobnum):
@@ -738,7 +948,7 @@ def main():
     port = reactor.listenTCP(proxy_port, factory)
     logger.info('Proxy Serving 监听端口（proxy_port）： %d' % port.getHost().port)
     from twisted.internet import reactor
-    reactor.suggestThreadPoolSize(25)
+    reactor.suggestThreadPoolSize(40)
     reactor.run()
 
 
