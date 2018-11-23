@@ -463,7 +463,7 @@ class ProxyServerFactory(ServerFactory):
                 uid = login_value[2]
                 pwd = login_value[3]
                 rpc = RPCProxy(uid, pwd, host=host, port=port, dbname=db)
-                result = self.rpc('stock.picking', 'leg_button_delivery', job_num, 'Frames', 4)
+                result = rpc('stock.picking', 'leg_button_delivery', job_num, 'Frames', 4)
 
                 if 'success' in result:
                     if len(self.scan_history[_path]) == maxHistory:
@@ -556,16 +556,55 @@ class ProxyServerFactory(ServerFactory):
             if ids:
                 PurchaseOrderRecords = rpc("purchase.order", "search_read", [("mo_id.id", "=", ids[0])], ["name"])
                 if PurchaseOrderRecords:
-                    strSucceed = rpc("stock.picking", "action_done_remote2", jobnum, 'lens picking for production')
-                    if strSucceed == "success!":
-                        msg = " 来料接收:操作成功"
-                        success = True
-                        self.num_recode[_path] += 1
-                        self.singal_num_recode[_path] += 1
-                        logger.info(" %s-%s:%s" % (_path, jobnum, msg))
+                    purchaseordername = PurchaseOrderRecords[0]['name']
+                    # 获取分拣类型
+                    pickids = rpc("stock.picking.type", "search", [("name", "=", "Receipts")])
+                    if pickids:
+                        MoveRecords = rpc("stock.picking", "search_read",
+                                          [("state", "not in", ["cancel"]),
+                                           ("origin", "=", purchaseordername),
+                                           ("picking_type_id", "=", pickids[0])], ["id"])
+                        if MoveRecords:
+                            mr_id = MoveRecords[0]['id']
+                            strSucceed = rpc("stock.picking", "action_done_remote", mr_id)
+                            if strSucceed == "success!":
+                                msg = " 来料接收:收料成功"
+                                logger.info(" %s，执行出库" % msg)
+                                returnmsg = rpc('mrp.production', 'rpc_action_picking_done', jobnum, 'lens')
+                                if returnmsg != '100':
+                                    if returnmsg == "501":
+                                        returnmsg = ":镜片已出库"
+                                    if returnmsg == "502":
+                                        returnmsg = ":镜架已出库"
+                                    elif returnmsg == "503":
+                                        returnmsg = ":无库存"
+                                    elif returnmsg == "504":
+                                        returnmsg = ":保留异常"
+                                    elif returnmsg == "505":
+                                        returnmsg = ":出库动作异常"
+                                    elif returnmsg == "506":
+                                        returnmsg = ":出库单不存在"
+                                    elif returnmsg == "507":
+                                        returnmsg = ":生产单不存在"
+                                    elif returnmsg == "508":
+                                        returnmsg = ":不需要出库"
+                                    msg += returnmsg + " - 请手动出库"
+                                else:
+                                    returnmsg = "出库成功"
+                                    msg += returnmsg
+                                    success = True
+                                    self.num_recode[_path] += 1
+                                    self.singal_num_recode[_path] += 1
+                                logger.info(" %s-%s:%s" % (_path, jobnum, msg))
+                            else:
+                                msg = " 来料接收:操作失败 : " + strSucceed
+                                logger.error(" %s-%s:%s" % (_path, jobnum, msg))
+                        else:
+                            msg = " :收料操作失败！"
+                            logger.error(" %s-%s:收料操作失败" % (_path, jobnum))
                     else:
-                        msg = jobnum + " 来料接收:操作失败 : " + strSucceed
-                        logger.error(" %s-%s:%s" % (_path, jobnum, msg))
+                        msg = " :无分拣类型,请联系主管,确认分拣类型:Receipts"
+                        logger.error(" %s-%s:无分拣类型" % (_path, jobnum))
                 else:
                     msg = " :无外协信息,请联系主管,确认采购询价单"
                     logger.error(" %s-%s:获取采购单失败" % (_path, jobnum))

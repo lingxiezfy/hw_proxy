@@ -46,6 +46,8 @@ def now_time():
 
 
 class OutSourcingPickScan(Resource):
+    def render_GET(self, request):
+        return "hello"
 
     def render_POST(self, request):
         session = request.getSession()
@@ -67,16 +69,59 @@ class OutSourcingPickScan(Resource):
                 if ids:
                     PurchaseOrderRecords = rpc("purchase.order", "search_read", [("mo_id.id", "=", ids[0])], ["name"])
                     if PurchaseOrderRecords:
-                        PickingTypeName = config.config['OutSourcingPickScan']['PickingTypeName']
-                        strSucceed = rpc("stock.picking", "action_done_remote2", job_num, PickingTypeName)
-                        if strSucceed == "success!":
-                            msg = job_num + " 来料接收:操作成功"
-                            msg_type = 'info'
-                            config.logger.info(" %s" % msg)
+                        purchaseordername = PurchaseOrderRecords[0]['name']
+                        config.logger.info(" 获取采购单成功 - %s:%s" % (job_num, purchaseordername))
+
+                        # 获取分拣类型
+                        PickType = "Receipts"
+                        pickids = rpc("stock.picking.type", "search", [("name", "=", PickType)])
+                        if pickids:
+                            MoveRecords = rpc("stock.picking", "search_read",
+                                              [("state", "not in", ["cancel"]),
+                                               ("origin", "=", purchaseordername),
+                                               ("picking_type_id", "=", pickids[0])], ["id"])
+                            if MoveRecords:
+                                mr_id = MoveRecords[0]['id']
+                                strSucceed = rpc("stock.picking", "action_done_remote", mr_id)
+                                if strSucceed == "success!":
+                                    msg = job_num + " 来料接收:收料成功 - 执行出库:"
+                                    returnmsg = rpc('mrp.production', 'rpc_action_picking_done', job_num, 'lens')
+                                    if returnmsg != '100':
+                                        if returnmsg == "501":
+                                            returnmsg = "镜片已出库"
+                                        if returnmsg == "502":
+                                            returnmsg = "镜架已出库"
+                                        elif returnmsg == "503":
+                                            returnmsg = "无库存"
+                                        elif returnmsg == "504":
+                                            returnmsg = "保留异常"
+                                        elif returnmsg == "505":
+                                            returnmsg = "出库动作异常"
+                                        elif returnmsg == "506":
+                                            returnmsg = "出库单不存在"
+                                        elif returnmsg == "507":
+                                            returnmsg = "生产单不存在"
+                                        elif returnmsg == "508":
+                                            returnmsg = "不需要出库"
+                                        msg += returnmsg + " - 请手动出库"
+                                        msg_type = 'warning'
+                                    else:
+                                        returnmsg = "出库成功"
+                                        msg += returnmsg
+                                        msg_type = 'info'
+                                    config.logger.info(" %s" % msg)
+                                else:
+                                    msg = job_num + " 来料接收:操作失败 : " + strSucceed
+                                    msg_type = 'error'
+                                    config.logger.error(" %s" % msg)
+                            else:
+                                msg = job_num + " :无外协信息,请联系主管,确认制造单或采购询价单"
+                                msg_type = 'error'
+                                config.logger.error(" 无外协信息 - %s" % job_num)
                         else:
-                            msg = job_num + " 来料接收:操作失败 : " + strSucceed
+                            msg = job_num + " :无分拣类型,请联系主管,确认分拣类型: " + PickType
                             msg_type = 'error'
-                            config.logger.error(" %s" % msg)
+                            config.logger.error(" 无分拣类型 - %s" % PickType)
                     else:
                         msg = job_num + " :无外协信息,请联系主管,确认采购询价单"
                         msg_type = "error"
