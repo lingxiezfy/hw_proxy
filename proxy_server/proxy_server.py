@@ -244,21 +244,21 @@ class ProxyServerFactory(ServerFactory):
             return True
         if status == '05':
             # 外协收料条码
-            self.state_recode[_path] = ('外协收料', '05')
+            self.state_recode[_path] = ('[外协收料]-出库', '05')
             self.num_recode[_path] = 0
             self.singal_num_recode[_path] = 0
             logger.info("-%s-设置外协收料成功-%s:%s" % (_path, self.state_recode[_path][0], status))
             return True
         if status == '06':
             # 销售出库单
-            self.state_recode[_path] = ('销售出库单', '06')
+            self.state_recode[_path] = ('[销售业务]-出库', '06')
             self.num_recode[_path] = 0
             self.singal_num_recode[_path] = 0
             logger.info("-%s-设置销售出库单成功-%s:%s" % (_path, self.state_recode[_path][0], status))
             return True
         if status == '07':
             # 销售出库单
-            self.state_recode[_path] = ('分拣发货', '07')
+            self.state_recode[_path] = ('[镜腿]-打印', '07')
             self.num_recode[_path] = 0
             self.singal_num_recode[_path] = 0
             logger.info("-%s-设置分拣发货成功-%s:%s" % (_path, self.state_recode[_path][0], status))
@@ -295,12 +295,12 @@ class ProxyServerFactory(ServerFactory):
                 logger.info("-%s-禁止切换出库条码，%s 正在处理中" % (_path, self.state_recode[_path][0]))
                 return True
             if fnc == '03':
-                self.state_recode[_path] = ('[O片O] 出库', 'lens')
+                self.state_recode[_path] = ('[O片O]-出库', 'lens')
                 self.singal_num_recode[_path] = 0
                 logger.info("-%s-设置镜片出库成功-%s:%s" % (_path, self.state_recode[_path][0], fnc))
                 return True
             elif fnc == '04':
-                self.state_recode[_path] = ('[口架口] 出库', 'frame')
+                self.state_recode[_path] = ('[口架口]-出库', 'frame')
                 self.singal_num_recode[_path] = 0
                 logger.info("-%s-设置镜架出库成功-%s:%s" % (_path, self.state_recode[_path][0], fnc))
                 return True
@@ -312,17 +312,17 @@ class ProxyServerFactory(ServerFactory):
         if fnc.startswith('08'):
             fnc = fnc.upper()
             if fnc == '08R':
-                self.state_recode[_path] = ('[片OO]-右右-退库', 'right')
+                self.state_recode[_path] = ('[片OO]-R 退库', 'right')
                 self.singal_num_recode[_path] = 0
                 logger.info("-%s-设置右镜片退库成功-%s:%s" % (_path, self.state_recode[_path][0], fnc))
                 return True
             elif fnc == '08L':
-                self.state_recode[_path] = ('[OO片]-左左-退库', 'left')
+                self.state_recode[_path] = ('[O片O]-L 退库', 'left')
                 self.singal_num_recode[_path] = 0
                 logger.info("-%s-设置左镜片退库成功-%s:%s" % (_path, self.state_recode[_path][0], fnc))
                 return True
             elif fnc == '08F':
-                self.state_recode[_path] = ('[口架口]-架架-退库', 'frame')
+                self.state_recode[_path] = ('[口架口]-退库', 'frame')
                 self.singal_num_recode[_path] = 0
                 logger.info("-%s-设置镜架退库成功-%s:%s" % (_path, self.state_recode[_path][0], fnc))
                 return True
