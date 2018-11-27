@@ -84,7 +84,8 @@ class order_list_resource(Resource):
         job_num = request.args[b'job_num'][0].decode("utf-8")
         operator_login = request.args[b'operator_login'][0].decode("utf-8")
         picking_type = request.args[b'picking_type'][0].decode("utf-8")
-        picking_time = request.args[b'picking_time'][0].decode("utf-8")
+        picking_time_start = request.args[b'picking_time_start'][0].decode("utf-8")
+        picking_time_end = request.args[b'picking_time_end'][0].decode("utf-8")
         db = SqlService(psycopg2, host, port, user, pwd, database)
         search_str = ""
         if operator_login:
@@ -103,12 +104,10 @@ class order_list_resource(Resource):
 
         if picking_type:
             search_str += "AND picking_type LIKE '%"+picking_type+"%' "
-        if picking_time:
-            ls = picking_time.split("-")
-            the_date = datetime.datetime(int(ls[0]), int(ls[1]), int(ls[2]))
-            pre_date = the_date + datetime.timedelta(days=1)
-            pre_data_str = pre_date.strftime('%Y-%m-%d')
-            search_str += "AND picking_time >= '"+picking_time+"' AND picking_time < '"+pre_data_str+"' "
+        if picking_time_start:
+            search_str += "AND picking_time >= '"+picking_time_start + "' "
+        if picking_time_end:
+            search_str += "AND picking_time < '" + picking_time_end + "' "
         sql = "select job_num,picking_time,picking_type,name operator_name from ("
         sql += "SELECT * from picking_history WHERE 1=1 "
         sql += search_str

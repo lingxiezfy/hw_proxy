@@ -24,6 +24,14 @@
 <div class="container-fluid">
     <div class="row">
         <div class="col-sm-3 col-md-2 sidebar">
+                <div class="form-group hidden_true">
+                    <label>选择开始时间</label>
+                    <input id="picking_time_start" name="picking_time_start" class="flatpickr flatpickr-input form-control" data-max-date=today type="text" placeholder="选择日期">
+                </div>
+                <div class="form-group hidden_true">
+                    <label>选择结束时间</label>
+                    <input id="picking_time_end" name="picking_time_end" class="flatpickr flatpickr-input form-control" data-max-date=today type="text" placeholder="选择日期">
+                </div>
                 <div class="form-group">
                     <label>扫描生产单号</label>
                     <input id="job_num" name="job_num" type="text" class="form-control" aria-label="...">
@@ -34,12 +42,13 @@
                 </div>
                 <div class="form-group hidden_true">
                     <label>选择出库类型</label>
-                    <input id="picking_type" name="picking_type" type="text" class="form-control" aria-label="...">
+                    <select id="picking_type" name="picking_type" class="form-control">
+                        <option value="">全部</option>
+                        <option value="lens">镜片</option>
+                        <option value="frame">镜架</option>
+                    </select>
                 </div>
-                <div class="form-group hidden_true">
-                    <label>选择出库日期</label>
-                    <input id="picking_time" name="picking_time" class="flatpickr flatpickr-input form-control" data-max-date=today type="text" placeholder="选择日期">
-                </div>
+
                 <div>
                     <button class="btn btn-default" id="search_btn" onclick="search_commit()">点击查询</button>
                 </div>

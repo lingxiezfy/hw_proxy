@@ -37,7 +37,8 @@ $('#orderPage').bPage({
             job_num:$('#job_num').val(),
             operator_login:$('#operator_login').val(),
             picking_type:$('#picking_type').val(),
-            picking_time:$('#picking_time').val()
+            picking_time_start:$('#picking_time_start').val(),
+            picking_time_end:$('#picking_time_end').val()
         };
     }
 });
@@ -49,11 +50,25 @@ function search_commit(){
 }
 
 //初始化日期选择
-var f = $('.flatpickr').flatpickr({
+var fs = $('#picking_time_start').flatpickr({
     allowInput: true,
     maxDate:"today",
-    locale: "zh"
+    locale: "zh",
+    enableTime:true,
+    time_24hr:true,
+    dateFormat: "Y-m-d H:i",
+    defaultDate:"08:00"
+});
+
+var fe = $('#picking_time_end').flatpickr({
+    allowInput: true,
+    maxDate:"today",
+    locale: "zh",
+    enableTime:true,
+    time_24hr:true,
+    dateFormat: "Y-m-d H:i",
+    defaultDate:"21:00"
 });
 
 
-
+search_commit();
