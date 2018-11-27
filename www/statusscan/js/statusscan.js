@@ -43,7 +43,7 @@ function make_panels() {
     }
     var row = Math.ceil(panel_size / col);
     var head_hight = $('.panel-heading').height();
-    var nav_height = $('nav').height();
+    var nav_height = 0;
     $('.height_nav').css('height', (nav_height+5) + 'px');
     var upset_height = shight - nav_height-5 - (row * head_hight)-((row)*45);
     if(upset_height > 0) {

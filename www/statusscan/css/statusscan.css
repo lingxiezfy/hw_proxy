@@ -33,11 +33,8 @@ body{
     overflow-y: auto;
 }
 .height_nav{
-    height: 55px;
+    height: 10px;
 }
 .rc_btn{
     display: none;
 }
-/*.height_container{*/
-    /*min-height:100vh;*/
-/*}*/
