@@ -312,7 +312,7 @@ class ProxyServerFactory(ServerFactory):
         if fnc.startswith('08'):
             fnc = fnc.upper()
             if fnc == '08R':
-                self.state_recode[_path] = ('[片OO]-R 退库', 'right')
+                self.state_recode[_path] = ('[O片O]-R 退库', 'right')
                 self.singal_num_recode[_path] = 0
                 logger.info("-%s-设置右镜片退库成功-%s:%s" % (_path, self.state_recode[_path][0], fnc))
                 return True
