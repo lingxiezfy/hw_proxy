@@ -31,7 +31,8 @@ function init() {
     }
     $('.header_title').text(request['header_title']);
     document.title = request['header_title'];
-    $('.num_name').text(request['num_name'])
+    $('.num_name').text(request['num_name']);
+    app.break_part = "right"
 
 }
 
@@ -146,12 +147,10 @@ const app = new Vue({
                 this.data_url = 'faultcode.rpy?break_type=S';
                 this.break_title = "报损";
                 this.break_reason = '';
-                this.break_part = '';
             }else if(new_type == 'B'){
                 this.data_url = 'faultcode.rpy?break_type=B';
                 this.break_title = "不良";
                 this.break_reason = '';
-                this.break_part = '';
             }else if (new_type == 'R'){
                 this.break_title = "退库";
                 this.break_reason = 'R888'
@@ -180,6 +179,7 @@ const app = new Vue({
                 this.break_part_T = ''
             }
             this.reason_section = '';
+            this.break_reason = ''
         },
         reason_section:function (new_section,old_section) {
             this.break_reason = ''

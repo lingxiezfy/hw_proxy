@@ -24,7 +24,7 @@
 
 <div id="app" class="container-fluid">
     <div class="row">
-        <div class="col-sm-3 col-md-2 sidebar">
+        <div class="col-sm-4 col-md-3 sidebar">
             <form id="scan_form">
                 <div class="form-group">
                     <label ><span>{{break_title}}</span></label>
@@ -37,12 +37,15 @@
                 </div>
                 <div class="form-group">
                     <label >请选择：镜架、镜片</label>
-                    <select id="break_part" name="break_part" v-model="break_part" class="form-control">
-                        <option value="">请选择</option>
-                        <option value="right">右镜片（R）</option>
-                        <option value="left">左镜片（L）</option>
-                        <option value="frame">镜架（F）</option>
-                    </select>
+                </div>
+                <div class="form-group">
+                    <label><input type="radio" v-model="break_part" value="right"/>右镜片（R）</label>
+                </div>
+                <div class="form-group">
+                    <label><input type="radio" v-model="break_part" value="left"/>左镜片（L）</label>
+                </div>
+                <div class="form-group">
+                    <label><input type="radio" v-model="break_part" value="frame"/>镜架（F）</label>
                 </div>
                 <div class="form-group" v-if="break_type == 'S' && break_part_T == 'B'">
                     <label >车间：<span class="msg_red">不选将显示全部原因</span></label>
@@ -91,7 +94,7 @@
 
 
         </div>
-        <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
+        <div class="col-sm-8 col-sm-offset-4 col-md-9 col-md-offset-3 main">
             <div id="view_panel" class="view_panel" style="width: 100%;">
                 <div class="panel panel-primary">
                     <div class="panel-heading">
