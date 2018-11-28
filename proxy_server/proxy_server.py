@@ -282,9 +282,11 @@ class ProxyServerFactory(ServerFactory):
         else:
             return False
 
-    def is_c_num(self, value):
-        if value and (value.startswith('c/') or value.startswith('C/')):
-            return True
+    def is_out_num(self, value):
+        if value:
+            value = value.upper()
+            if '/OUT/' in value:
+                return True
         else:
             return False
 
@@ -425,8 +427,8 @@ class ProxyServerFactory(ServerFactory):
                     # 状态录入
                     d = threads.deferToThread(self.pickingbusinessforstatus, _path, _data)
                     d.addCallback(self.send_msg_to)
-        elif self.is_c_num(_data):
-            # C/ 单号
+        elif self.is_out_num(_data):
+            # /out/ 单号
             state_value = self.state_recode.get(_path, None)
             if login_value is None:
                 msg = "error:未登录"
@@ -494,7 +496,7 @@ class ProxyServerFactory(ServerFactory):
 
     def c_out_scan(self, _path, _c_out):
         """
-        调拨单出库，C/OUT/...
+        调拨单出库，/OUT/...
         :param _path:
         :param _c_out:
         :return:
@@ -508,25 +510,28 @@ class ProxyServerFactory(ServerFactory):
                 host = self.config.get("Odoo", "rpc_host")
                 port = self.config.get("Odoo", "rpc_port")
                 db = self.config.get("Odoo", "rpc_db")
-                maxHistory = self.config["Odoo"]["maxHistory"]
+                maxHistory = self.config["Odoo"]["maxhistory"]
 
                 uid = login_value[2]
                 pwd = login_value[3]
                 rpc = RPCProxy(uid, pwd, host=host, port=port, dbname=db)
-                result = rpc('stock.picking', 'action_done_remote', _c_out)
-
-                if 'success' in result:
-                    if len(self.scan_history[_path]) == maxHistory:
-                        self.scan_history[_path].pop(0)
-                    self.scan_history[_path].append(_c_out)
-                    self.num_recode[_path] += 1
-                    self.singal_num_recode[_path] += 1
-                    msg = now_time() + "-" + _c_out + "-" + self.state_recode[_path][0] + "-" + '操作成功！'
-                    return _path, "login:%s:%s&state:%s&num:%d&msg:%s" % \
-                           (login_value[0], login_value[1], state_value[0],
-                            self.num_recode[_path], msg)
+                ids = rpc("stock.picking", "search", [("name", "=", _c_out)])
+                if ids:
+                    result = rpc('stock.picking', 'action_done_remote', ids[0])
+                    if 'success' in result:
+                        if len(self.scan_history[_path]) == maxHistory:
+                            self.scan_history[_path].pop(0)
+                        self.scan_history[_path].append(_c_out)
+                        self.num_recode[_path] += 1
+                        self.singal_num_recode[_path] += 1
+                        msg = now_time() + "-" + _c_out + "-" + self.state_recode[_path][0] + "-" + '操作成功！'
+                        return _path, "login:%s:%s&state:%s&num:%d&msg:%s" % \
+                               (login_value[0], login_value[1], state_value[0],
+                                self.num_recode[_path], msg)
+                    else:
+                        msg = now_time() + "-" + _c_out + "-" + self.state_recode[_path][0] + "-" + '操作失败！'
                 else:
-                    msg = now_time() + "-" + _c_out + "-" + self.state_recode[_path][0] + "-" + '操作失败！'
+                    msg = now_time() + "-" + _c_out + "-" + self.state_recode[_path][0] + "-" + '未找到订单！'
             except:
                 msg = now_time() + "-" + _c_out + "-" + self.state_recode[_path][0] + "-" + '发生异常！'
         return _path, "login:%s:%s&state:%s&num:%d&error:%s" % \
