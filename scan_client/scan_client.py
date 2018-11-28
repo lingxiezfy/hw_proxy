@@ -110,7 +110,7 @@ while True:
                                     data_type = config['scanClient']['type']
                                 else:
                                     data_type = 'kbd'
-                                packet = struct.pack("3s60s20s", data_type.encode("utf-8"),
+                                packet = struct.pack("3s60s30s", data_type.encode("utf-8"),
                                                      dev.path[19:].encode("utf-8"),
                                                      key_str.encode("utf-8"))
                                 packet += "\r\n".encode("utf-8")

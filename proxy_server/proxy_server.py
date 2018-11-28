@@ -78,7 +78,10 @@ class ProxyServerFactory(ServerFactory):
     # peer_ip ：扫描枪控制客户端的ip
     def data_receive(self, peer_ip, data):
         try:
-            _type, _source, _keys = struct.unpack("3s60s20s", data)
+            try:
+                _type, _source, _keys = struct.unpack("3s60s20s", data)
+            except:
+                _type, _source, _keys = struct.unpack("3s60s30s", data)
             input_type = _type.decode("utf-8").rstrip('\0')
             input_source = _source.decode("utf-8").rstrip('\0')
             input_keys = _keys.decode("utf-8").rstrip('\0')
@@ -312,17 +315,17 @@ class ProxyServerFactory(ServerFactory):
         if fnc.startswith('08'):
             fnc = fnc.upper()
             if fnc == '08R':
-                self.state_recode[_path] = ('[O片O]-R 退库', 'right')
+                self.state_recode[_path] = ('[R片R]-R 退库', 'right')
                 self.singal_num_recode[_path] = 0
                 logger.info("-%s-设置右镜片退库成功-%s:%s" % (_path, self.state_recode[_path][0], fnc))
                 return True
             elif fnc == '08L':
-                self.state_recode[_path] = ('[O片O]-L 退库', 'left')
+                self.state_recode[_path] = ('[L片L]-L 退库', 'left')
                 self.singal_num_recode[_path] = 0
                 logger.info("-%s-设置左镜片退库成功-%s:%s" % (_path, self.state_recode[_path][0], fnc))
                 return True
             elif fnc == '08F':
-                self.state_recode[_path] = ('[口架口]-退库', 'frame')
+                self.state_recode[_path] = ('[F架F]-F 退库', 'frame')
                 self.singal_num_recode[_path] = 0
                 logger.info("-%s-设置镜架退库成功-%s:%s" % (_path, self.state_recode[_path][0], fnc))
                 return True
